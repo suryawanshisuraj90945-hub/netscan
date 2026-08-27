@@ -98,7 +98,10 @@
             };
             await fetch('/api/v1/ips/{{ ip.ip }}', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': NETSCAN_API_KEY,
+                },
                 body: JSON.stringify(payload),
             });
             location.reload();

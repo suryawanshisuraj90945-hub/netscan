@@ -161,6 +161,21 @@ def update_ip_reservation(
     return rec
 
 
+@router.delete("/{ip_address}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_ip(
+    ip_address: str,
+    session: Session = Depends(get_session),
+    current_user=Depends(require_role(Role.ADMIN, Role.OPERATOR)),
+):
+    """Remove an IP address record from tracking."""
+    rec = session.exec(select(IPAddress).where(IPAddress.ip == ip_address.strip())).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail=f"IP '{ip_address}' not found.")
+    session.delete(rec)
+    session.commit()
+    return None
+
+
 @router.get("/{ip_address}/history")
 def get_ip_history(
     ip_address: str,

@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlmodel import Session, select
 from netscan.api.auth import hash_key
 from netscan.config import settings
@@ -21,6 +22,26 @@ def _get_api_key(request: Request) -> str:
     return request.session.get("api_key", "")
 
 
+def _generate_csrf_token(request: Request) -> str:
+    """Generate a signed CSRF token bound to the current session."""
+    secret = settings.SECRET_KEY or "test-csrf-fallback"
+    salt = f"csrf-login-{request.session.get('_sid', '')}"
+    return URLSafeTimedSerializer(secret).dumps("csrf", salt=salt)
+
+
+def _validate_csrf_token(request: Request, token: str) -> bool:
+    """Validate a CSRF token. Returns False if missing, expired, or invalid."""
+    if not token:
+        return False
+    secret = settings.SECRET_KEY or "test-csrf-fallback"
+    salt = f"csrf-login-{request.session.get('_sid', '')}"
+    try:
+        URLSafeTimedSerializer(secret).loads(token, salt=salt, max_age=1800)
+        return True
+    except (BadSignature, SignatureExpired):
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Authentication routes (no session required)
 # ---------------------------------------------------------------------------
@@ -29,16 +50,30 @@ def _get_api_key(request: Request) -> str:
 def login_page(request: Request):
     if request.session.get("api_key"):
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse(request=request, name="login.html", context={})
+    csrf_token = _generate_csrf_token(request)
+    return templates.TemplateResponse(request=request, name="login.html", context={"csrf_token": csrf_token})
 
 
 @web_router.post("/login")
-def login_submit(request: Request, password: str = Form(""), api_key: str = Form(""), session: Session = Depends(get_session)):
+def login_submit(
+    request: Request,
+    password: str = Form(""),
+    api_key: str = Form(""),
+    csrf_token: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    if not _validate_csrf_token(request, csrf_token):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Invalid or expired form token. Please try again.", "csrf_token": _generate_csrf_token(request)},
+        )
+
     if password != settings.DASHBOARD_PASSWORD:
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": "Invalid password."},
+            context={"error": "Invalid password.", "csrf_token": _generate_csrf_token(request)},
         )
 
     hashed = hash_key(api_key)
@@ -49,14 +84,14 @@ def login_submit(request: Request, password: str = Form(""), api_key: str = Form
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": "Invalid or revoked API key."},
+            context={"error": "Invalid or revoked API key.", "csrf_token": _generate_csrf_token(request)},
         )
 
     request.session["api_key"] = api_key
     return RedirectResponse(url="/", status_code=303)
 
 
-@web_router.get("/logout")
+@web_router.post("/logout")
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=303)

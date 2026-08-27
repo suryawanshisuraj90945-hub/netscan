@@ -50,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(DashboardAuthMiddleware)
-app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY or "dev-fallback-secret")
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 # Mount Routers
 app.include_router(api_v1_router)

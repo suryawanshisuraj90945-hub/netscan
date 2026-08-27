@@ -39,6 +39,11 @@ class Settings(BaseSettings):
                 "SECRET_KEY must be set in production (DEBUG=False). "
                 "Set it in your .env file or environment."
             )
+        if not self.DEBUG and self.DASHBOARD_PASSWORD == "admin":
+            raise ValueError(
+                "DASHBOARD_PASSWORD must be changed from the default 'admin' in production "
+                "(DEBUG=False). Set a strong password in your .env file or environment."
+            )
 
 
 settings = Settings()

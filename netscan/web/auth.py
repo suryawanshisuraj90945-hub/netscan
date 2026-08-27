@@ -3,7 +3,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
 DASHBOARD_PATHS = {"/", "/provision", "/scans", "/settings"}
-DASHBOARD_PREFIX = "/subnets/"
+DASHBOARD_PREFIXES = ("/subnets/", "/web/ips/")
 
 
 class DashboardAuthMiddleware(BaseHTTPMiddleware):
@@ -14,8 +14,7 @@ class DashboardAuthMiddleware(BaseHTTPMiddleware):
 
         is_dashboard_page = (
             path in DASHBOARD_PATHS
-            or path.startswith(DASHBOARD_PREFIX)
-            or path == "/web/ips/available"
+            or path.startswith(DASHBOARD_PREFIXES)
         )
 
         if is_dashboard_page and not request.session.get("api_key"):

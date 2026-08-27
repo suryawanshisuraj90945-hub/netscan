@@ -3,6 +3,7 @@ import shutil
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
@@ -11,6 +12,7 @@ from netscan.config import settings
 from netscan.db import init_db, engine
 from netscan.limiter import limiter
 from netscan.services.scheduler_service import scheduler
+from netscan.web.auth import DashboardAuthMiddleware
 from netscan.web.views import web_router
 
 logging.basicConfig(level=logging.INFO if not settings.DEBUG else logging.DEBUG)
@@ -47,6 +49,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(DashboardAuthMiddleware)
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY or "dev-fallback-secret")
 
 # Mount Routers
 app.include_router(api_v1_router)

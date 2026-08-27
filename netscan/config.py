@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: str = "*"
 
+    # Dashboard Authentication
+    DASHBOARD_PASSWORD: str = "admin"
+
     # Webhook Defaults
     WEBHOOK_TIMEOUT_SECONDS: int = 10
     WEBHOOK_MAX_RETRIES: int = 3

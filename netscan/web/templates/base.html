@@ -84,6 +84,9 @@
                 <a href="/docs" target="_blank" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition">
                     <i data-lucide="book-open" class="w-3.5 h-3.5"></i> OpenAPI Docs
                 </a>
+                <a href="/logout" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
+                </a>
             </div>
         </div>
     </header>
@@ -99,6 +102,10 @@
     </footer>
 
     <script>
+        var NETSCAN_API_KEY = "{{ api_key }}";
+        document.addEventListener('htmx:configRequest', function(evt) {
+            evt.detail.headers['X-API-Key'] = NETSCAN_API_KEY;
+        });
         lucide.createIcons();
         document.body.addEventListener('htmx:afterSwap', function() {
             lucide.createIcons();

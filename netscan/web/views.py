@@ -1,9 +1,11 @@
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
+from netscan.api.auth import hash_key
+from netscan.config import settings
 from netscan.db import get_session
 from netscan.models import ApiKey, IPAddress, IPHistory, IPStatus, ScanJob, Subnet, Webhook
 from netscan.scanner.cidr import expand_cidr_hosts, get_subnet_metadata
@@ -14,11 +16,62 @@ templates = Jinja2Templates(directory=str(templates_path))
 web_router = APIRouter(include_in_schema=False)
 
 
+def _get_api_key(request: Request) -> str:
+    """Extract the API key from the dashboard session."""
+    return request.session.get("api_key", "")
+
+
+# ---------------------------------------------------------------------------
+# Authentication routes (no session required)
+# ---------------------------------------------------------------------------
+
+@web_router.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    if request.session.get("api_key"):
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request=request, name="login.html", context={})
+
+
+@web_router.post("/login")
+def login_submit(request: Request, password: str = Form(""), api_key: str = Form(""), session: Session = Depends(get_session)):
+    if password != settings.DASHBOARD_PASSWORD:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Invalid password."},
+        )
+
+    hashed = hash_key(api_key)
+    key_rec = session.exec(
+        select(ApiKey).where(ApiKey.key_hash == hashed, ApiKey.is_active == True)
+    ).first()
+    if not key_rec:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Invalid or revoked API key."},
+        )
+
+    request.session["api_key"] = api_key
+    return RedirectResponse(url="/", status_code=303)
+
+
+@web_router.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Protected dashboard routes (middleware handles auth redirect)
+# ---------------------------------------------------------------------------
+
 @web_router.get("/", response_class=HTMLResponse)
 def index_view(request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     subnets = session.exec(select(Subnet)).all()
     subnet_cards = []
-    
+
     total_active = 0
     total_uncertain = 0
     total_available = 0
@@ -63,12 +116,14 @@ def index_view(request: Request, session: Session = Depends(get_session)):
             "total_active_ips": total_active,
             "total_uncertain_ips": total_uncertain,
             "total_available_ips": total_available,
+            "api_key": api_key,
         },
     )
 
 
 @web_router.get("/subnets/{subnet_id}/matrix", response_class=HTMLResponse)
 def matrix_view(subnet_id: uuid.UUID, request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     subnet = session.get(Subnet, subnet_id)
     if not subnet:
         raise HTTPException(status_code=404, detail="Subnet not found")
@@ -101,12 +156,14 @@ def matrix_view(subnet_id: uuid.UUID, request: Request, session: Session = Depen
             "subnet": subnet,
             "total_hosts": len(all_hosts),
             "matrix": matrix,
+            "api_key": api_key,
         },
     )
 
 
 @web_router.get("/web/ips/{ip_address}/drawer", response_class=HTMLResponse)
 def ip_drawer_partial(ip_address: str, request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     rec = session.exec(select(IPAddress).where(IPAddress.ip == ip_address.strip())).first()
     if not rec:
         raise HTTPException(status_code=404, detail=f"IP '{ip_address}' not tracked yet.")
@@ -123,12 +180,14 @@ def ip_drawer_partial(ip_address: str, request: Request, session: Session = Depe
         context={
             "ip": rec,
             "history": history,
+            "api_key": api_key,
         },
     )
 
 
 @web_router.get("/provision", response_class=HTMLResponse)
 def provision_view(request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     subnets = session.exec(select(Subnet)).all()
     subnet_cards = []
     for s in subnets:
@@ -147,6 +206,7 @@ def provision_view(request: Request, session: Session = Depends(get_session)):
         context={
             "active_page": "provision",
             "subnets": subnet_cards,
+            "api_key": api_key,
         },
     )
 
@@ -157,7 +217,6 @@ def web_available_ips(
     count: int = 1,
     session: Session = Depends(get_session),
 ):
-    """Server-side available IPs endpoint for the provision page (no API key required)."""
     try:
         sid = uuid.UUID(subnet_id)
     except ValueError:
@@ -185,6 +244,7 @@ def web_available_ips(
 
 @web_router.get("/scans", response_class=HTMLResponse)
 def scans_view(request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     scans = session.exec(select(ScanJob).order_by(ScanJob.created_at.desc()).limit(100)).all()
     return templates.TemplateResponse(
         request=request,
@@ -193,12 +253,14 @@ def scans_view(request: Request, session: Session = Depends(get_session)):
             "active_page": "scans",
             "scans": scans,
             "str": str,
+            "api_key": api_key,
         },
     )
 
 
 @web_router.get("/settings", response_class=HTMLResponse)
 def settings_view(request: Request, session: Session = Depends(get_session)):
+    api_key = _get_api_key(request)
     keys = session.exec(select(ApiKey)).all()
     webhooks = session.exec(select(Webhook)).all()
     return templates.TemplateResponse(
@@ -208,5 +270,6 @@ def settings_view(request: Request, session: Session = Depends(get_session)):
             "active_page": "settings",
             "keys": keys,
             "webhooks": webhooks,
+            "api_key": api_key,
         },
     )

@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 from netscan.main import app
-from netscan.models import IPStatus
+from netscan.models import DiscoveryMethod, IPAddress, IPStatus, Role, Subnet
 
 
 def test_health_check(client: TestClient):
@@ -211,3 +212,84 @@ def test_get_ip_detail_and_404(auth_db):
 
     missing_history = client.get("/api/v1/ips/203.0.113.98/history", headers=headers)
     assert missing_history.status_code == 404
+
+
+def test_delete_available_ip(auth_db):
+    client, headers, engine = auth_db
+    subnet_id = seed_subnet(engine)
+    seed_ip(engine, subnet_id, "192.168.77.20", status=IPStatus.AVAILABLE_CANDIDATE)
+
+    res = client.delete("/api/v1/ips/192.168.77.20", headers=headers)
+    assert res.status_code == 204
+
+    get_res = client.get("/api/v1/ips/192.168.77.20", headers=headers)
+    assert get_res.status_code == 404
+
+
+def test_delete_reserved_ip(auth_db):
+    client, headers, engine = auth_db
+    subnet_id = seed_subnet(engine)
+    seed_ip(engine, subnet_id, "192.168.77.21", status=IPStatus.ASSIGNED_RESERVED)
+
+    res = client.delete("/api/v1/ips/192.168.77.21", headers=headers)
+    assert res.status_code == 204
+
+    get_res = client.get("/api/v1/ips/192.168.77.21", headers=headers)
+    assert get_res.status_code == 404
+
+
+def test_delete_active_ip(auth_db):
+    client, headers, engine = auth_db
+    subnet_id = seed_subnet(engine)
+    seed_ip(engine, subnet_id, "192.168.77.22", status=IPStatus.ACTIVE_DETECTED)
+
+    res = client.delete("/api/v1/ips/192.168.77.22", headers=headers)
+    assert res.status_code == 204
+
+    get_res = client.get("/api/v1/ips/192.168.77.22", headers=headers)
+    assert get_res.status_code == 404
+
+
+def test_delete_unknown_ip_returns_404(auth_client):
+    client, headers = auth_client
+    res = client.delete("/api/v1/ips/203.0.113.99", headers=headers)
+    assert res.status_code == 404
+
+
+def test_delete_ip_requires_auth(client: TestClient):
+    res = client.delete("/api/v1/ips/192.168.77.30")
+    assert res.status_code == 401
+
+
+def test_delete_ip_read_only_forbidden(make_key_headers):
+    client, make_headers = make_key_headers
+    ro_headers = make_headers(Role.READ_ONLY)
+    res = client.delete("/api/v1/ips/192.168.77.30", headers=ro_headers)
+    assert res.status_code == 403
+
+
+def test_delete_ip_then_scan_recreates(auth_db):
+    client, headers, engine = auth_db
+    subnet_id = seed_subnet(engine)
+    seed_ip(engine, subnet_id, "192.168.77.25", status=IPStatus.ACTIVE_DETECTED)
+
+    res = client.delete("/api/v1/ips/192.168.77.25", headers=headers)
+    assert res.status_code == 204
+
+    get_res = client.get("/api/v1/ips/192.168.77.25", headers=headers)
+    assert get_res.status_code == 404
+
+    with Session(engine) as session:
+        subnet = session.get(Subnet, subnet_id)
+        rec = IPAddress(
+            subnet_id=subnet.id,
+            ip="192.168.77.25",
+            status=IPStatus.AVAILABLE_CANDIDATE,
+            discovery_method=DiscoveryMethod.NONE,
+        )
+        session.add(rec)
+        session.commit()
+
+    get_res2 = client.get("/api/v1/ips/192.168.77.25", headers=headers)
+    assert get_res2.status_code == 200
+    assert get_res2.json()["status"] == IPStatus.AVAILABLE_CANDIDATE.value

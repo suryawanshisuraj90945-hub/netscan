@@ -57,15 +57,15 @@ Live status of implementation phases.
 
 ## Phase 4: Health Check & Observability
 
-**Status:** PARTIALLY COMPLETE
+**Status:** COMPLETE
 
 | Item | Status | Notes |
 |------|--------|-------|
 | 4.1 Health check with real status | Done | Verifies DB + nmap, returns degraded if unhealthy |
-| 4.2 JSON structured logging | PENDING | Current: plain text basicConfig |
-| 4.3 Scan service structured logging | PENDING | Missing: subnet_cidr, scan_job_id, duration_ms |
-| 4.4 Scheduler failure logging | PENDING | Scan failures not logged |
-| 4.5 Webhook dispatch logging | PENDING | Success/failure/retry not logged |
+| 4.2 JSON structured logging | COMPLETE | Replaced plain text basicConfig with JsonFormatter; logs include timestamp, level, logger, message, and structured extra fields |
+| 4.3 Scan service structured logging | COMPLETE | Scan start/completion/failure logs with scan_job_id, subnet_cidr, duration_ms, stats |
+| 4.4 Scheduler failure logging | COMPLETE | Scheduled scan start/completion/failure logs with scan_job_id, subnet_id, duration_ms, error on failure; exceptions re-raised |
+| 4.5 Webhook dispatch logging | COMPLETE | Converted f-string logs to structured logs with webhook_id, event, attempt, status_code, duration_ms, target_host; secrets never logged |
 
 ---
 
@@ -98,5 +98,5 @@ Additional fixes made while writing tests:
 | Phase 1 | COMPLETE | 19/19 pass |
 | Phase 2 | COMPLETE | 19/19 pass |
 | Phase 3 | COMPLETE | 19/19 pass |
-| Phase 4 | PARTIAL | 19/19 pass |
-| Phase 5 | COMPLETE | 64/64 pass |
+| Phase 4 | COMPLETE | 105/105 pass |
+| Phase 5 | COMPLETE | 105/105 pass |

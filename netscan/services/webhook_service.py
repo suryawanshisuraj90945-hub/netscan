@@ -4,12 +4,22 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 import httpx
 from sqlmodel import Session, select
 from netscan.config import settings
 from netscan.models import Webhook
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_url(url: str) -> str:
+    """Extract safe host info from URL for logging."""
+    try:
+        parsed = urlparse(url)
+        return parsed.hostname or "unknown"
+    except Exception:
+        return "unknown"
 
 
 class WebhookDispatcher:
@@ -53,13 +63,67 @@ class WebhookDispatcher:
                     "X-NetScan-Signature": signature,
                 }
 
+                safe_host = _sanitize_url(wh.url)
+
                 for attempt in range(settings.WEBHOOK_MAX_RETRIES):
+                    attempt_start = datetime.now(timezone.utc)
                     try:
                         response = await client.post(wh.url, content=payload_bytes, headers=headers)
+                        attempt_duration_ms = int((datetime.now(timezone.utc) - attempt_start).total_seconds() * 1000)
+
                         if response.is_success:
-                            logger.info(f"Webhook '{wh.name}' delivered successfully for event {event_name}")
+                            logger.info(
+                                "Webhook delivered successfully",
+                                extra={
+                                    "webhook_id": str(wh.id),
+                                    "webhook_name": wh.name,
+                                    "event": event_name,
+                                    "attempt": attempt + 1,
+                                    "status_code": response.status_code,
+                                    "duration_ms": attempt_duration_ms,
+                                    "target_host": safe_host,
+                                },
+                            )
                             break
                         else:
-                            logger.warning(f"Webhook '{wh.name}' returned status {response.status_code} on attempt {attempt + 1}")
+                            logger.warning(
+                                "Webhook returned non-success status",
+                                extra={
+                                    "webhook_id": str(wh.id),
+                                    "webhook_name": wh.name,
+                                    "event": event_name,
+                                    "attempt": attempt + 1,
+                                    "status_code": response.status_code,
+                                    "duration_ms": attempt_duration_ms,
+                                    "target_host": safe_host,
+                                },
+                            )
                     except Exception as e:
-                        logger.error(f"Webhook '{wh.name}' delivery error on attempt {attempt + 1}: {e}")
+                        attempt_duration_ms = int((datetime.now(timezone.utc) - attempt_start).total_seconds() * 1000)
+                        logger.error(
+                            "Webhook delivery error",
+                            extra={
+                                "webhook_id": str(wh.id),
+                                "webhook_name": wh.name,
+                                "event": event_name,
+                                "attempt": attempt + 1,
+                                "error_type": type(e).__name__,
+                                "error_message": str(e),
+                                "duration_ms": attempt_duration_ms,
+                                "target_host": safe_host,
+                            },
+                            exc_info=True,
+                        )
+
+                else:
+                    # Max retries exhausted
+                    logger.error(
+                        "Webhook delivery failed after max retries",
+                        extra={
+                            "webhook_id": str(wh.id),
+                            "webhook_name": wh.name,
+                            "event": event_name,
+                            "attempts": settings.WEBHOOK_MAX_RETRIES,
+                            "target_host": safe_host,
+                        },
+                    )

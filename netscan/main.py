@@ -1,6 +1,9 @@
+import json
 import logging
 import shutil
+import sys
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -15,7 +18,58 @@ from netscan.services.scheduler_service import scheduler
 from netscan.web.auth import DashboardAuthMiddleware
 from netscan.web.views import web_router
 
-logging.basicConfig(level=logging.INFO if not settings.DEBUG else logging.DEBUG)
+
+class JsonFormatter(logging.Formatter):
+    """JSON log formatter with support for structured fields via extra={...}."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_data = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+
+        # Add extra fields from record.__dict__ that are not standard logging attributes
+        standard_attrs = {
+            "name", "msg", "args", "created", "filename", "funcName",
+            "levelname", "levelno", "lineno", "module", "msecs",
+            "message", "pathname", "process", "processName",
+            "relativeCreated", "thread", "threadName", "exc_info",
+            "exc_text", "stack_info",
+        }
+
+        for key, value in record.__dict__.items():
+            if key not in standard_attrs:
+                try:
+                    json.dumps(value)
+                    log_data[key] = value
+                except (TypeError, ValueError):
+                    log_data[key] = str(value)
+
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(log_data, ensure_ascii=False)
+
+
+def configure_logging() -> None:
+    """Configure structured JSON logging for production, human-readable for development."""
+    handler = logging.StreamHandler(sys.stdout)
+    if settings.DEBUG:
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s"
+        ))
+    else:
+        handler.setFormatter(JsonFormatter())
+
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
+
+
+configure_logging()
 logger = logging.getLogger("netscan")
 
 

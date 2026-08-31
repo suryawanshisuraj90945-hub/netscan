@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  netscan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netscan
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    user: netscan
+    environment:
+      # Application
+      - APP_NAME=NetScan
+      # DEBUG enables debug logging and relaxed security.
+      #   true = development / debugging
+      #   false = production (required for deployment)
+      - DEBUG=false
+      # SECRET_KEY is required for session signing and must be set in production (DEBUG=False).
+      # Generate a strong random string (minimum 32 characters recommended).
+      # The actual value should be injected via your .env file or Docker environment.
+      - SECRET_KEY=${SECRET_KEY}
+      # DATABASE_URL connection string.
+      # Default: sqlite:///./netscan.db
+      # For production, consider PostgreSQL: DATABASE_URL="postgresql://user:pass@host:5432/netscan"
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./netscan.db}
+      # Scanner Defaults
+      - DEFAULT_SCAN_INTERVAL_MINUTES=${DEFAULT_SCAN_INTERVAL_MINUTES:-60}
+      - DEFAULT_MISS_THRESHOLD=${DEFAULT_MISS_THRESHOLD:-3}
+      - DEFAULT_QUARANTINE_HOURS=${DEFAULT_QUARANTINE_HOURS:-48}
+      - NMAP_TIMEOUT_SECONDS=${NMAP_TIMEOUT_SECONDS:-300}
+      - NMAP_TIMING_TEMPLATE=${NMAP_TIMING_TEMPLATE:-"-T4"}
+      - TOP_TCP_PORTS=${TOP_TCP_PORTS:-"80,443,22,445,3389,8080,8443,53"}
+      # CORS
+      # Comma-separated list of allowed origins.
+      # ALLOWED_ORIGINS="https://your-domain.com,http://localhost:8080" is the recommended secure default.
+      # Using "*" allows all origins (not recommended for production).
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://your-domain.com,http://localhost:8080}
+      # Dashboard Authentication
+      # DASHBOARD_PASSWORD is required when DEBUG=false. Change from the default 'admin' in production.
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-CHANGE_THIS_SECURE_PASSWORD}
+      # Webhook Defaults
+      - WEBHOOK_TIMEOUT_SECONDS=${WEBHOOK_TIMEOUT_SECONDS:-10}
+      - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
+    # Persistent volume for SQLite database
+    volumes:
+      - netscan-data:/app
+    # Healthcheck compatible with the application's /health endpoint
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:8000/health'); r.raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # Same user as the Dockerfile
+    user: netscan
+
+volumes:
+  netscan-data:
+    driver: local

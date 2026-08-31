@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import Session, select
 from netscan.db import engine
@@ -50,7 +51,14 @@ class ScanScheduler:
                 args=[subnet.id],
                 replace_existing=True,
             )
-            logger.info(f"Scheduled scan for {subnet.cidr} every {subnet.scan_interval_minutes}m.")
+            logger.info(
+                "Scheduled scan configured",
+                extra={
+                    "subnet_id": str(subnet.id),
+                    "subnet_cidr": subnet.cidr,
+                    "interval_minutes": subnet.scan_interval_minutes,
+                },
+            )
 
     def remove_subnet_job(self, subnet_id: uuid.UUID) -> None:
         job_id = f"subnet_scan_{subnet_id}"
@@ -59,7 +67,19 @@ class ScanScheduler:
 
     @staticmethod
     async def trigger_scheduled_scan(subnet_id: uuid.UUID) -> None:
+        scan_start_time = datetime.now(timezone.utc)
+        subnet_cidr = None
+
         with Session(engine) as session:
+            subnet = session.get(Subnet, subnet_id)
+            if not subnet:
+                logger.error(
+                    "Scheduled scan failed: subnet not found",
+                    extra={"subnet_id": str(subnet_id)},
+                )
+                return
+            subnet_cidr = subnet.cidr
+
             job = ScanJob(
                 subnet_id=subnet_id,
                 status=ScanStatus.QUEUED,
@@ -70,7 +90,41 @@ class ScanScheduler:
             session.refresh(job)
             scan_job_id = job.id
 
-        await scan_service.execute_scan(scan_job_id)
+        logger.info(
+            "Scheduled scan started",
+            extra={
+                "scan_job_id": str(scan_job_id),
+                "subnet_id": str(subnet_id),
+                "subnet_cidr": subnet_cidr,
+            },
+        )
+
+        try:
+            await scan_service.execute_scan(scan_job_id)
+            scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
+            logger.info(
+                "Scheduled scan completed",
+                extra={
+                    "scan_job_id": str(scan_job_id),
+                    "subnet_id": str(subnet_id),
+                    "subnet_cidr": subnet_cidr,
+                    "duration_ms": scan_duration_ms,
+                },
+            )
+        except Exception as e:
+            scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
+            logger.error(
+                "Scheduled scan failed",
+                extra={
+                    "scan_job_id": str(scan_job_id),
+                    "subnet_id": str(subnet_id),
+                    "subnet_cidr": subnet_cidr,
+                    "duration_ms": scan_duration_ms,
+                    "error": str(e),
+                },
+                exc_info=True,
+            )
+            raise
 
 
 scheduler = ScanScheduler()

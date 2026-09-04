@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation — NetScan</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <div class="logo"><span>Net</span>Scan</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="docs.html" class="active">Docs</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="api.html">API</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-outline" target="_blank">GitHub</a>
+        </div>
+    </div>
+</nav>
+
+<div class="docs-page">
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">
+                    <h4>Getting Started</h4>
+                    <a href="#installation">Installation</a>
+                    <a href="#docker">Docker</a>
+                    <a href="#first-run">First Run</a>
+                    <a href="#env-vars">Environment Variables</a>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Configuration</h4>
+                    <a href="#production">Production Setup</a>
+                    <a href="#database">Database</a>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Core Concepts</h4>
+                    <a href="#overview">Architecture Overview</a>
+                    <a href="#scanner">Scanner Engine</a>
+                    <a href="#classifier">State Classifier</a>
+                    <a href="#scheduler">Scheduler</a>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Operations</h4>
+                    <a href="#scanning">Running Scans</a>
+                    <a href="#webhooks">Webhooks</a>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Help</h4>
+                    <a href="#troubleshooting">Troubleshooting</a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+
+            <section id="installation">
+                <h1>Installation</h1>
+                <p>NetScan is a Python application that runs with FastAPI. Install from source to get started.</p>
+
+                <h3>From Source</h3>
+                <div class="code-block">
+                    <span class="cmd">git clone</span> https://github.com/suryawanshisuraj90945-hub/netscan.git<br>
+                    <span class="cmd">cd</span> netscan<br>
+                    <span class="cmd">pip install</span> <span class="flag">-e</span> <span class="str">".[test]"</span><br>
+                    <span class="cmd">pytest</span> <span class="flag">-v</span>
+                </div>
+
+                <h3>System Requirements</h3>
+                <table>
+                    <thead>
+                        <tr><th>Requirement</th><th>Details</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Python</td><td>3.10 or later</td></tr>
+                        <tr><td>nmap</td><td>Installed on host (<code>sudo apt install nmap</code> on Debian/Ubuntu)</td></tr>
+                        <tr><td>OS</td><td>Linux (full probe support), macOS, Windows (TCP Connect only)</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>nmap is runtime-only.</strong> The test suite uses an in-memory SQLite database and never invokes nmap. You only need nmap installed on the host where NetScan runs.
+                </div>
+            </section>
+
+            <section id="docker">
+                <h1>Docker</h1>
+                <p>NetScan ships as a pre-built container image. No build step required.</p>
+
+                <h3>Quick Start</h3>
+                <div class="code-block">
+                    <span class="cmd">docker pull</span> ghcr.io/suryawanshisuraj90945-hub/netscan:latest<br><br>
+                    <span class="cmd">docker run</span> <span class="flag">-d</span> <span class="flag">-p</span> 8000:8000 --name netscan \<br>
+                    &nbsp;&nbsp;<span class="flag">-e</span> ENVIRONMENT=<span class="str">production</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-e</span> SECRET_KEY=<span class="str">your-strong-random-string-min-32-chars</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-e</span> DASHBOARD_PASSWORD=<span class="str">your-secure-password</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-e</span> ALLOWED_ORIGINS=<span class="str">http://localhost:8000</span> \<br>
+                    &nbsp;&nbsp;ghcr.io/suryawanshisuraj90945-hub/netscan:latest
+                </div>
+
+                <h3>Docker Compose</h3>
+                <div class="code-block">
+                    <span class="cmd">git clone</span> https://github.com/suryawanshisuraj90945-hub/netscan.git<br>
+                    <span class="cmd">cd</span> netscan<br>
+                    <span class="cmd">docker compose</span> <span class="str">up -d</span>
+                </div>
+
+                <h3>Building from Source</h3>
+                <div class="code-block">
+                    <span class="cmd">docker build</span> <span class="flag">-t</span> netscan:local .<br>
+                    <span class="cmd">docker run</span> <span class="flag">-d</span> <span class="flag">-p</span> 8000:8000 netscan:local
+                </div>
+
+                <h3>Image Details</h3>
+                <table>
+                    <thead>
+                        <tr><th>Property</th><th>Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Base Image</td><td><code>python:3.12-slim</code></td></tr>
+                        <tr><td>Installed Tools</td><td>nmap, curl</td></tr>
+                        <tr><td>User</td><td>Non-root (netscan)</td></tr>
+                        <tr><td>Exposed Port</td><td>8000</td></tr>
+                        <tr><td>Healthcheck</td><td><code>curl -f http://localhost:8000/health || exit 1</code></td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="first-run">
+                <h1>First Run</h1>
+                <p>Follow these four steps to get NetScan running and scanning your first subnet.</p>
+
+                <h3>Step 1 — Bootstrap an API Key</h3>
+                <p>The bootstrap endpoint is the only unauthenticated API route. It creates your first admin key and is disabled once a key exists.</p>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-X POST</span> http://localhost:8000/api/v1/auth/keys/bootstrap \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-d</span> <span class="str">'{"name": "admin-key", "role": "admin"}'</span>
+                </div>
+
+                <div class="callout callout-warning">
+                    <strong>raw_key is shown once.</strong> Store the returned key immediately. It cannot be retrieved later.
+                </div>
+
+                <h3>Step 2 — Create a Subnet</h3>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-X POST</span> http://localhost:8000/api/v1/subnets \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"X-API-Key: YOUR_KEY_HERE"</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-d</span> <span class="str">'{"cidr": "192.168.1.0/24", "name": "Office LAN"}'</span>
+                </div>
+
+                <h3>Step 3 — Trigger a Scan</h3>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-X POST</span> http://localhost:8000/api/v1/subnets/<span class="str">SUBNET_ID</span>/scan \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"X-API-Key: YOUR_KEY_HERE"</span>
+                </div>
+
+                <h3>Step 4 — View Results</h3>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-H</span> <span class="str">"X-API-Key: YOUR_KEY_HERE"</span> \<br>
+                    &nbsp;&nbsp;http://localhost:8000/api/v1/ips/available?subnet_id=<span class="str">SUBNET_ID</span>&count=10
+                </div>
+            </section>
+
+            <section id="env-vars">
+                <h1>Environment Variables</h1>
+                <p>All settings are configured via environment variables or a <code>.env</code> file in the project root.</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>ENVIRONMENT</code></td><td><code>development</code></td><td><code>production</code>, <code>development</code>, or <code>test</code></td></tr>
+                        <tr><td><code>DEBUG</code></td><td><code>false</code></td><td>Debug logging. Must be <code>false</code> in production</td></tr>
+                        <tr><td><code>SECRET_KEY</code></td><td><em>(empty)</em></td><td><strong>Required in production.</strong> Session signing key</td></tr>
+                        <tr><td><code>DATABASE_URL</code></td><td><code>sqlite:///./netscan.db</code></td><td>Database connection string</td></tr>
+                        <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>*</code></td><td>Comma-separated CORS origins. <code>*</code> rejected in production</td></tr>
+                        <tr><td><code>DASHBOARD_PASSWORD</code></td><td><code>admin</code></td><td>Must be changed from default in production</td></tr>
+                        <tr><td><code>DEFAULT_SCAN_INTERVAL_MINUTES</code></td><td><code>60</code></td><td>Default scan interval per subnet</td></tr>
+                        <tr><td><code>DEFAULT_MISS_THRESHOLD</code></td><td><code>3</code></td><td>Consecutive misses before uncertain state</td></tr>
+                        <tr><td><code>DEFAULT_QUARANTINE_HOURS</code></td><td><code>48</code></td><td>Hours before uncertain host can become available</td></tr>
+                        <tr><td><code>NMAP_TIMEOUT_SECONDS</code></td><td><code>300</code></td><td>Per-scan timeout</td></tr>
+                        <tr><td><code>WEBHOOK_TIMEOUT_SECONDS</code></td><td><code>10</code></td><td>Outbound webhook timeout</td></tr>
+                        <tr><td><code>WEBHOOK_MAX_RETRIES</code></td><td><code>3</code></td><td>Webhook delivery retry count</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="production">
+                <h1>Production Setup</h1>
+                <p>When <code>ENVIRONMENT=production</code>, NetScan enforces strict security requirements at startup.</p>
+
+                <div class="checklist">
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Set <code>ENVIRONMENT=production</code></div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Generate and set a strong <code>SECRET_KEY</code> (min 32 characters)</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Change <code>DASHBOARD_PASSWORD</code> from the default <code>admin</code></div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Set <code>ALLOWED_ORIGINS</code> to specific domains (not <code>*</code>)</div>
+                </div>
+
+                <h3>Generate a Secret Key</h3>
+                <div class="code-block">
+                    <span class="comment"># Option 1: Python</span><br>
+                    <span class="cmd">python3</span> <span class="flag">-c</span> <span class="str">"import secrets; print(secrets.token_urlsafe(48))"</span><br><br>
+                    <span class="comment"># Option 2: OpenSSL</span><br>
+                    <span class="cmd">openssl</span> rand <span class="flag">-base64</span> 48
+                </div>
+
+                <div class="callout callout-danger">
+                    <strong>Never commit secrets to version control.</strong> Use environment variables or a <code>.env</code> file that is excluded via <code>.gitignore</code>.
+                </div>
+            </section>
+
+            <section id="database">
+                <h1>Database</h1>
+                <p>NetScan uses SQLModel (SQLAlchemy under the hood) with Alembic for schema migrations.</p>
+
+                <h3>SQLite vs PostgreSQL</h3>
+                <table>
+                    <thead>
+                        <tr><th>Feature</th><th>SQLite</th><th>PostgreSQL</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Default</td><td>Yes (<code>sqlite:///./netscan.db</code>)</td><td>No</td></tr>
+                        <tr><td>Setup</td><td>Zero config</td><td>Requires running server</td></tr>
+                        <tr><td>Concurrency</td><td>Single writer</td><td>Full concurrent access</td></tr>
+                        <tr><td>Production</td><td>Small deployments</td><td>Recommended for scale</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Alembic Migrations</h3>
+                <div class="code-block">
+                    <span class="comment"># Apply all pending migrations</span><br>
+                    <span class="cmd">alembic</span> upgrade head<br><br>
+                    <span class="comment"># Generate a new migration after model changes</span><br>
+                    <span class="cmd">alembic</span> revision <span class="flag">--autogenerate</span> <span class="flag">-m</span> <span class="str">"description of change"</span>
+                </div>
+            </section>
+
+            <section id="overview">
+                <h1>Architecture Overview</h1>
+                <p>NetScan follows a clean four-layer architecture. Each layer has a single responsibility.</p>
+
+                <div class="arch-diagram">
+                    <div class="arch-box api-box">
+                        <h4>API Layer</h4>
+                        <p>FastAPI REST endpoints, Jinja2 + HTMX dashboard</p>
+                    </div>
+                    <div class="arch-arrow">&darr;</div>
+                    <div class="arch-box service-box">
+                        <h4>Service Layer</h4>
+                        <p>Scan orchestration, scheduler, webhook dispatcher</p>
+                    </div>
+                    <div class="arch-arrow">&darr;</div>
+                    <div class="arch-box scanner-box">
+                        <h4>Scanner Layer</h4>
+                        <p>nmap runner, CIDR utils, state classifier</p>
+                    </div>
+                    <div class="arch-arrow">&darr;</div>
+                    <div class="arch-box data-box">
+                        <h4>Data Layer</h4>
+                        <p>SQLModel schemas, Alembic migrations</p>
+                    </div>
+                </div>
+
+                <h3>Directory Structure</h3>
+                <table>
+                    <thead>
+                        <tr><th>Path</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>api/v1/</code></td><td>REST endpoints: subnets, ips, scans, webhooks, auth_keys</td></tr>
+                        <tr><td><code>api/auth.py</code></td><td>API key authentication dependency (X-API-Key header)</td></tr>
+                        <tr><td><code>scanner/</code></td><td>Discovery engine: nmap runner, CIDR utils, classifier</td></tr>
+                        <tr><td><code>services/</code></td><td>Background services: scan scheduler, webhook dispatcher</td></tr>
+                        <tr><td><code>web/</code></td><td>HTMX dashboard: Jinja2 templates, server-rendered UI</td></tr>
+                        <tr><td><code>config.py</code></td><td>Settings via pydantic-settings, env vars, .env file</td></tr>
+                        <tr><td><code>models.py</code></td><td>SQLModel schemas: Subnet, IPAddress, ScanJob, IPHistory, Webhook, ApiKey</td></tr>
+                        <tr><td><code>main.py</code></td><td>FastAPI app factory, lifespan, middleware, rate limiting</td></tr>
+                        <tr><td><code>tests/</code></td><td>pytest suite with in-memory SQLite (no nmap required)</td></tr>
+                        <tr><td><code>alembic/</code></td><td>Database migration scripts</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="scanner">
+                <h1>Scanner Engine</h1>
+                <p>The scanner wraps nmap with automatic capability detection. It chooses the best probe method based on the available system privileges.</p>
+
+                <h3>Probe Types</h3>
+                <table>
+                    <thead>
+                        <tr><th>Probe</th><th>Privileges</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>ARP</td><td>Root / CAP_NET_RAW</td><td>L2 neighbor discovery via ARP requests</td></tr>
+                        <tr><td>TCP SYN</td><td>Root / CAP_NET_RAW</td><td>Half-open stealth scan. No full TCP connection</td></tr>
+                        <tr><td>TCP Connect</td><td>Unprivileged</td><td>Full TCP handshake. Fallback for non-root</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Auto-Detection</h3>
+                <p>At startup, the scanner attempts to open a raw ICMP socket. If successful, it enables ARP and TCP SYN probes. Otherwise, it falls back to TCP Connect.</p>
+
+                <div class="callout callout-info">
+                    <strong>Linux note.</strong> Run as root or grant <code>CAP_NET_RAW</code> for full probe support: <code>sudo setcap cap_net_raw+ep $(which nmap)</code>.
+                </div>
+
+                <h3>nmap Timing</h3>
+                <p>Default timing template is <code>-T4</code> (aggressive). Top TCP ports scanned: <code>80, 443, 22, 445, 3389, 8080, 8443, 53</code>. Configurable via <code>NMAP_TIMING_TEMPLATE</code> and <code>TOP_TCP_PORTS</code>.</p>
+            </section>
+
+            <section id="classifier">
+                <h1>State Classifier</h1>
+                <p>The classifier implements safe availability logic. It evaluates probe outcomes against subnet quarantine policies to determine IP state transitions.</p>
+
+                <h3>IP States</h3>
+                <table>
+                    <thead>
+                        <tr><th>State</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>ACTIVE_DETECTED</code></td><td>Host responded to probe. Currently live on the network.</td></tr>
+                        <tr><td><code>UNCERTAIN_FIREWALLED</code></td><td>Host did not respond. In quarantine period before reclassification.</td></tr>
+                        <tr><td><code>AVAILABLE_CANDIDATE</code></td><td>Quarantine completed. IP is safe to allocate.</td></tr>
+                        <tr><td><code>ASSIGNED_RESERVED</code></td><td>Manually reserved. Locked from automatic state changes.</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Transition Rules</h3>
+                <div class="callout callout-warning">
+                    <strong>Safe availability logic.</strong> An unresponsive host becomes <code>UNCERTAIN_FIREWALLED</code>. It may only become <code>AVAILABLE_CANDIDATE</code> after meeting <strong>both</strong> the consecutive-miss threshold <strong>and</strong> the quarantine duration. Never weaken this to "ping failed = free."
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">PROBE</div>
+                    <div class="flow-arrow">&rarr;</div>
+                    <div class="flow-step active">ACTIVE_DETECTED</div>
+                    <div class="flow-arrow">&rarr;</div>
+                    <div class="flow-step uncertain">UNCERTAIN_FIREWALLED</div>
+                    <div class="flow-arrow">&rarr;</div>
+                    <div class="flow-step available">AVAILABLE_CANDIDATE</div>
+                </div>
+
+                <p>Reserved IPs are excluded from automatic transitions. New IPs with no probe history start as <code>AVAILABLE_CANDIDATE</code>.</p>
+            </section>
+
+            <section id="scheduler">
+                <h1>Scheduler</h1>
+                <p>NetScan uses APScheduler for in-process background scanning. No external dependencies like Redis or Celery.</p>
+
+                <h3>How It Works</h3>
+                <ol>
+                    <li>Each subnet defines a <code>scan_interval_minutes</code> (default 60).</li>
+                    <li>The scheduler registers a recurring job per active subnet.</li>
+                    <li>On each tick, a <code>ScanJob</code> is created with <code>triggered_by=SCHEDULE</code>.</li>
+                    <li>Results are classified and IP states updated atomically.</li>
+                </ol>
+
+                <h3>Configuration</h3>
+                <table>
+                    <thead>
+                        <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>DEFAULT_SCAN_INTERVAL_MINUTES</code></td><td><code>60</code></td><td>Default interval for new subnets</td></tr>
+                        <tr><td><code>DEFAULT_MISS_THRESHOLD</code></td><td><code>3</code></td><td>Consecutive misses before uncertain</td></tr>
+                        <tr><td><code>DEFAULT_QUARANTINE_HOURS</code></td><td><code>48</code></td><td>Quarantine duration in hours</td></tr>
+                    </tbody>
+                </table>
+                <p>Set <code>scan_interval_minutes=0</code> on a subnet to disable scheduled scanning.</p>
+            </section>
+
+            <section id="scanning">
+                <h1>Running Scans</h1>
+                <p>Scans can be triggered manually via the API or automatically via the scheduler.</p>
+
+                <h3>Manual Scan</h3>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-X POST</span> http://localhost:8000/api/v1/subnets/<span class="str">SUBNET_ID</span>/scan \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"X-API-Key: YOUR_KEY_HERE"</span>
+                </div>
+
+                <h3>Scheduled Scan</h3>
+                <p>Configure the scan interval when creating a subnet or update it later:</p>
+                <div class="code-block">
+                    <span class="cmd">curl</span> <span class="flag">-X PATCH</span> http://localhost:8000/api/v1/subnets/<span class="str">SUBNET_ID</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"X-API-Key: YOUR_KEY_HERE"</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \<br>
+                    &nbsp;&nbsp;<span class="flag">-d</span> <span class="str">'{"scan_interval_minutes": 30}'</span>
+                </div>
+
+                <h3>Scan Job Lifecycle</h3>
+                <table>
+                    <thead>
+                        <tr><th>Status</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>QUEUED</code></td><td>Scan job created, waiting to run</td></tr>
+                        <tr><td><code>RUNNING</code></td><td>nmap probe in progress</td></tr>
+                        <tr><td><code>COMPLETED</code></td><td>Scan finished, results classified</td></tr>
+                        <tr><td><code>FAILED</code></td><td>Scan failed (timeout, nmap error, etc.)</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Scan Size Recommendations</h3>
+                <table>
+                    <thead>
+                        <tr><th>CIDR</th><th>IPs</th><th>Estimated Time</th><th>Notes</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>/28</code></td><td>14</td><td>~5s</td><td>Safe for real-time use</td></tr>
+                        <tr><td><code>/24</code></td><td>254</td><td>~30s</td><td>Typical office subnet</td></tr>
+                        <tr><td><code>/20</code></td><td>4,094</td><td>~5min</td><td>Consider off-peak</td></tr>
+                        <tr><td><code>/16</code></td><td>65,534</td><td>~30min+</td><td>Schedule overnight</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="webhooks">
+                <h1>Webhooks</h1>
+                <p>Outbound webhook notifications with HMAC-SHA256 signing for secure event delivery.</p>
+
+                <h3>Events</h3>
+                <table>
+                    <thead>
+                        <tr><th>Event</th><th>Trigger</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>ip.state_changed</code></td><td>An IP transitions between states (e.g. ACTIVE to UNCERTAIN)</td></tr>
+                        <tr><td><code>scan.completed</code></td><td>A scan job finishes (COMPLETED or FAILED)</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Payload Format</h3>
+                <div class="code-block">
+                    {<br>
+                    &nbsp;&nbsp;<span class="str">"event"</span>: <span class="str">"ip.state_changed"</span>,<br>
+                    &nbsp;&nbsp;<span class="str">"timestamp"</span>: <span class="str">"2026-09-01T12:00:00Z"</span>,<br>
+                    &nbsp;&nbsp;<span class="str">"data"</span>: {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"ip"</span>: <span class="str">"192.168.1.50"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"old_status"</span>: <span class="str">"ACTIVE_DETECTED"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"new_status"</span>: <span class="str">"UNCERTAIN_FIREWALLED"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"subnet_id"</span>: <span class="str">"550e8400-e29b-41d4-a716-446655440000"</span><br>
+                    &nbsp;&nbsp;}<br>
+                    }
+                </div>
+
+                <h3>Signature Verification</h3>
+                <p>Each webhook includes an <code>X-Netscan-Signature</code> header containing the HMAC-SHA256 digest of the request body, computed with the webhook's secret key. Verify this signature at the receiver to ensure authenticity.</p>
+            </section>
+
+            <section id="troubleshooting">
+                <h1>Troubleshooting</h1>
+                <p>Common issues and their solutions.</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Issue</th><th>Solution</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>nmap not found</code> error at startup</td><td>Install nmap: <code>sudo apt install nmap</code>. It must be on your system PATH.</td></tr>
+                        <tr><td>Scan returns no results</td><td>Check that you're running as root or with <code>CAP_NET_RAW</code> for ARP/SYN probes. Unprivileged mode uses TCP Connect only.</td></tr>
+                        <tr><td>Production startup fails with <code>SECRET_KEY</code> error</td><td>Set <code>SECRET_KEY</code> to a random string (min 32 chars). See the Production Setup section.</td></tr>
+                        <tr><td><code>ALLOWED_ORIGINS="*"</code> rejected</td><td>In production, set specific origins: <code>ALLOWED_ORIGINS=https://example.com</code>.</td></tr>
+                        <tr><td>Webhook not received</td><td>Check <code>WEBHOOK_TIMEOUT_SECONDS</code>. Verify the webhook URL is reachable and the secret is correct.</td></tr>
+                        <tr><td>Dashboard shows stale data</td><td>The HTMX dashboard polls server-rendered partials. Clear browser cache or hard refresh.</td></tr>
+                        <tr><td>Database locked (SQLite)</td><td>SQLite supports one writer at a time. For concurrent access, migrate to PostgreSQL via <code>DATABASE_URL</code>.</td></tr>
+                        <tr><td>Tests fail with <code>nmap</code> errors</td><td>Tests use an in-memory SQLite database and never call nmap. Ensure you're running <code>pytest -v</code> from the project root.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+</body>
+</html>

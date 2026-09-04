@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference — NetScan</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .toc{display:flex;flex-direction:column;gap:2px}
+        .toc a{display:block;padding:6px 12px;border-radius:6px;font-size:.82rem;color:var(--muted);transition:all .2s;border-left:2px solid transparent}
+        .toc a:hover{color:var(--text);text-decoration:none;background:rgba(34,211,238,.05);border-left-color:var(--accent)}
+        .toc a.active{color:var(--accent);background:rgba(34,211,238,.08);border-left-color:var(--accent)}
+        .code-block.response{margin:8px 0 0}
+        .code-block pre{margin:0}
+        .endpoint .tag{font-size:.65rem;padding:2px 6px;border-radius:4px;background:rgba(167,139,250,.15);color:var(--accent2);font-weight:600;letter-spacing:.03em}
+        .endpoint .response-title{margin-top:16px}
+        .endpoint pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:'SF Mono',monospace;font-size:.8rem;color:var(--text);overflow-x:auto;line-height:1.6;margin:8px 0 0}
+        .endpoint .curl{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:'SF Mono',monospace;font-size:.78rem;color:var(--muted);overflow-x:auto;line-height:1.6;margin:12px 0 0}
+        .endpoint .curl code{background:none;padding:0;color:var(--text)}
+        .params-list{margin:8px 0;padding-left:0;list-style:none}
+        .params-list li{padding:6px 0;border-bottom:1px solid var(--border);font-size:.85rem;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+        .params-list li:last-child{border:none}
+        .param-name{font-family:'SF Mono',monospace;color:var(--accent);font-size:.82rem}
+        .param-type{color:var(--accent2);font-size:.75rem;font-family:'SF Mono',monospace}
+        .param-req{color:var(--red);font-size:.7rem;font-weight:700}
+        .param-opt{color:var(--muted);font-size:.7rem}
+        .enum-values{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+        .enum-values span{font-size:.75rem;padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-family:'SF Mono',monospace;color:var(--muted)}
+        .model-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:12px 0}
+        .model-table th{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+        .model-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+        .model-table td code{font-size:.78rem}
+        h4.response-title{font-size:.8rem;font-weight:600;margin:14px 0 4px;color:var(--text);display:flex;align-items:center;gap:6px}
+        .status-badge{font-size:.7rem;padding:2px 6px;border-radius:4px;font-family:monospace;font-weight:700}
+        .status-200{background:rgba(74,222,128,.15);color:var(--green)}
+        .status-201{background:rgba(34,211,238,.15);color:var(--accent)}
+        .status-204{background:rgba(167,139,250,.15);color:var(--accent2)}
+        .status-400{background:rgba(251,146,60,.15);color:var(--orange)}
+        .status-403{background:rgba(248,113,113,.15);color:var(--red)}
+        .status-404{background:rgba(248,113,113,.15);color:var(--red)}
+        .docs-content section{border-bottom:none}
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <div class="logo"><span>Net</span>Scan</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="docs.html">Docs</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="api.html" class="active">API</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-outline" target="_blank">GitHub</a>
+        </div>
+    </div>
+</nav>
+
+<div class="docs-page">
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">
+                    <h4>Reference</h4>
+                    <div class="toc">
+                        <a href="#authentication">Authentication</a>
+                        <a href="#api-keys">API Keys</a>
+                        <a href="#subnets">Subnets</a>
+                        <a href="#ip-addresses">IP Addresses</a>
+                        <a href="#scans">Scans</a>
+                        <a href="#webhooks">Webhooks</a>
+                        <a href="#models">Models</a>
+                        <a href="#rate-limiting">Rate Limiting</a>
+                        <a href="#errors">Error Responses</a>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Quick Links</h4>
+                    <div class="toc">
+                        <a href="docs.html">Documentation</a>
+                        <a href="dashboard.html">Dashboard</a>
+                        <a href="index.html">Home</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <section id="authentication">
+                <h1>API Reference</h1>
+                <p>Complete reference for the NetScan REST API. All endpoints are under the base path <code>/api/v1</code>.</p>
+
+                <h3>Authentication</h3>
+                <p>Every <code>/api/v1</code> endpoint requires authentication via the <code>X-API-Key</code> header. The only exception is the bootstrap endpoint, which is open until the first API key is created.</p>
+
+                <div class="code-block response">
+<pre>curl -H "X-API-Key: ns_live_abc123..." https://netscan.example.com/api/v1/subnets</pre>
+                </div>
+
+                <h3>Role-Based Access Control</h3>
+                <p>NetScan enforces three roles with distinct permission levels. Each API key is assigned exactly one role at creation time.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Description</th>
+                            <th>Allowed Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>admin</code></td>
+                            <td>Full access</td>
+                            <td>CRUD on all resources, API key management, scan triggers</td>
+                        </tr>
+                        <tr>
+                            <td><code>operator</code></td>
+                            <td>Operational access</td>
+                            <td>Subnet/IP CRUD, scan triggers, webhook management. No API key management.</td>
+                        </tr>
+                        <tr>
+                            <td><code>read_only</code></td>
+                            <td>Read-only queries</td>
+                            <td>List and view subnets, IPs, scans, webhooks, and history.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>Bootstrap:</strong> On a fresh instance with no API keys, <code>POST /api/v1/auth/keys/bootstrap</code> is open and returns an admin key. Once any key exists, this endpoint returns <code>403 Forbidden</code>.
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- API KEYS -->
+            <!-- ============================================================ -->
+            <section id="api-keys">
+                <div class="endpoint-group">
+                    <h2>API Keys</h2>
+
+                    <!-- 1. List Keys -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/auth/keys</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>List all API keys. Returns metadata only — raw secrets are never included after creation.</p>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "CI Pipeline",
+    "prefix": "ns_live_a1b2",
+    "role": "operator",
+    "is_active": true,
+    "last_used_at": "2026-09-01T12:00:00Z",
+    "created_at": "2026-08-15T08:30:00Z"
+  }
+]</pre>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." https://netscan.example.com/api/v1/auth/keys</code>
+                        </div>
+                    </div>
+
+                    <!-- 2. Create Key -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/auth/keys</span>
+                            <span class="auth-badge admin">ADMIN</span>
+                        </div>
+                        <p>Create a new API key. The raw key is returned once at creation and cannot be retrieved afterward.</p>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">name</span> <span class="param-type">string</span> <span class="param-req">required</span> — Human-readable label for the key</li>
+                            <li><span class="param-name">role</span> <span class="param-type">Role</span> <span class="param-opt">optional</span> — One of <code>admin</code>, <code>operator</code>, <code>read_only</code>. Defaults to <code>operator</code>.</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-201">201</span></h4>
+                        <pre>{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "Deploy Script",
+  "prefix": "ns_live_x9y8",
+  "role": "operator",
+  "raw_key": "ns_live_x9y8_z7w6_v5u4_t3s2_r1q0...",
+  "message": "Store this key safely! It will never be shown again."
+}</pre>
+                        <div class="curl">
+                            <code>curl -X POST -H "X-API-Key: ns_live_..." -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"name": "Deploy Script", "role": "operator"}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/auth/keys</code>
+                        </div>
+                    </div>
+
+                    <!-- 3. Bootstrap -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/auth/keys/bootstrap</span>
+                            <span class="tag">NO AUTH</span>
+                        </div>
+                        <p>Create the first API key on a fresh instance. This is the only unauthenticated endpoint. The key is always assigned the <code>admin</code> role. Disabled once any API key exists.</p>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">name</span> <span class="param-type">string</span> <span class="param-req">required</span> — Label for the bootstrap key</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-201">201</span></h4>
+                        <pre>{
+  "id": "550e8400-e29b-41d4-a716-446655440002",
+  "name": "Bootstrap Admin",
+  "prefix": "ns_live_m3n4",
+  "role": "admin",
+  "raw_key": "ns_live_m3n4_o5p6_q7r8...",
+  "message": "Store this key safely! It will never be shown again. This is the bootstrap key (role: admin)."
+}</pre>
+                        <h4>Error <span class="status-badge status-403">403</span></h4>
+                        <p>Returned if any API key already exists.</p>
+                        <pre>{
+  "detail": "Bootstrap disabled: API keys already exist. Use POST /api/v1/auth/keys with a valid key."
+}</pre>
+                        <div class="curl">
+                            <code>curl -X POST -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"name": "Bootstrap Admin"}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/auth/keys/bootstrap</code>
+                        </div>
+                    </div>
+
+                    <!-- 4. Revoke Key -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-delete">DELETE</span>
+                            <span class="endpoint-path">/api/v1/auth/keys/{key_id}</span>
+                            <span class="auth-badge admin">ADMIN</span>
+                        </div>
+                        <p>Permanently revoke an API key. This action cannot be undone.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">key_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span> — ID of the key to revoke</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-204">204</span></h4>
+                        <p>No content on success.</p>
+                        <div class="curl">
+                            <code>curl -X DELETE -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/auth/keys/550e8400-e29b-41d4-a716-446655440000</code>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- SUBNETS -->
+            <!-- ============================================================ -->
+            <section id="subnets">
+                <div class="endpoint-group">
+                    <h2>Subnets</h2>
+
+                    <!-- 5. List Subnets -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/subnets</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>List all managed subnets with IP statistics for each. Includes computed counts for active, uncertain, reserved, and available IPs.</p>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440010",
+    "cidr": "192.168.1.0/24",
+    "name": "Office LAN",
+    "description": "Main office subnet",
+    "scan_interval_minutes": 60,
+    "miss_threshold": 3,
+    "quarantine_hours": 48,
+    "is_active": true,
+    "created_at": "2026-08-01T10:00:00Z",
+    "metadata": { ... },
+    "stats": {
+      "total": 254,
+      "active": 42,
+      "uncertain": 5,
+      "reserved": 10,
+      "available": 197
+    }
+  }
+]</pre>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." https://netscan.example.com/api/v1/subnets</code>
+                        </div>
+                    </div>
+
+                    <!-- 6. Create Subnet -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/subnets</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Register a new subnet for scanning. The CIDR is validated and normalized on creation.</p>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">cidr</span> <span class="param-type">string</span> <span class="param-req">required</span> — IPv4 CIDR block, e.g. <code>192.168.1.0/24</code></li>
+                            <li><span class="param-name">name</span> <span class="param-type">string</span> <span class="param-req">required</span> — Human-readable name</li>
+                            <li><span class="param-name">description</span> <span class="param-type">string | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">scan_interval_minutes</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Defaults to 60. Set to 0 to disable scheduled scanning.</li>
+                            <li><span class="param-name">miss_threshold</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Consecutive missed scans before eligible for available. Defaults to 3.</li>
+                            <li><span class="param-name">quarantine_hours</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Minimum hours in UNCERTAIN before becoming AVAILABLE. Defaults to 48.</li>
+                            <li><span class="param-name">is_active</span> <span class="param-type">boolean</span> <span class="param-opt">optional</span> — Defaults to true.</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-201">201</span></h4>
+                        <p>Returns the created <code>Subnet</code> object with generated <code>id</code>, <code>created_at</code>, and <code>updated_at</code> fields.</p>
+                        <h4>Errors</h4>
+                        <p><span class="status-badge status-400">400</span> — Invalid CIDR or subnet already exists.</p>
+                        <div class="curl">
+                            <code>curl -X POST -H "X-API-Key: ns_live_..." -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"cidr": "10.0.0.0/24", "name": "Dev VLAN", "scan_interval_minutes": 30}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/subnets</code>
+                        </div>
+                    </div>
+
+                    <!-- 7. Get Subnet -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/subnets/{subnet_id}</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Retrieve a single subnet by its ID.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <p>Returns the full <code>Subnet</code> object.</p>
+                    </div>
+
+                    <!-- 8. Update Subnet -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-patch">PATCH</span>
+                            <span class="endpoint-path">/api/v1/subnets/{subnet_id}</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Partially update a subnet. Only provided fields are changed; omitted fields remain unchanged.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">name</span> <span class="param-type">string | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">description</span> <span class="param-type">string | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">scan_interval_minutes</span> <span class="param-type">integer | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">miss_threshold</span> <span class="param-type">integer | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">quarantine_hours</span> <span class="param-type">integer | null</span> <span class="param-opt">optional</span></li>
+                            <li><span class="param-name">is_active</span> <span class="param-type">boolean | null</span> <span class="param-opt">optional</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <p>Returns the updated <code>Subnet</code> object.</p>
+                        <div class="curl">
+                            <code>curl -X PATCH -H "X-API-Key: ns_live_..." -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"quarantine_hours": 72}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/subnets/550e8400-...</code>
+                        </div>
+                    </div>
+
+                    <!-- 9. Delete Subnet -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-delete">DELETE</span>
+                            <span class="endpoint-path">/api/v1/subnets/{subnet_id}</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Delete a subnet and all associated IP records and scan jobs. The subnet is also removed from the scheduler.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-204">204</span></h4>
+                        <p>No content on success.</p>
+                    </div>
+
+                    <!-- 10. IP Matrix -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/subnets/{subnet_id}/matrix</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Return all host IPs in the subnet with their current real-time state. Designed for the visual CIDR grid in the dashboard.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>{
+  "subnet_id": "550e8400-e29b-41d4-a716-446655440010",
+  "cidr": "192.168.1.0/24",
+  "name": "Office LAN",
+  "total_hosts": 254,
+  "matrix": [
+    {
+      "ip": "192.168.1.1",
+      "status": "ACTIVE_DETECTED",
+      "hostname": "gateway.local",
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "mac_vendor": "Cisco",
+      "open_ports_count": 3,
+      "last_seen_at": "2026-09-04T08:00:00Z",
+      "last_scanned_at": "2026-09-04T08:00:00Z",
+      "consecutive_misses": 0
+    },
+    {
+      "ip": "192.168.1.2",
+      "status": "AVAILABLE_CANDIDATE",
+      "hostname": null,
+      "mac_address": null,
+      "mac_vendor": null,
+      "open_ports_count": 0,
+      "last_seen_at": null,
+      "last_scanned_at": null,
+      "consecutive_misses": 0
+    }
+  ]
+}</pre>
+                        <p>Hosts not yet scanned appear with <code>AVAILABLE_CANDIDATE</code> status and null fields.</p>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/subnets/550e8400-.../matrix</code>
+                        </div>
+                    </div>
+
+                    <!-- 11. Trigger Scan -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/subnets/{subnet_id}/scan</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Trigger an immediate asynchronous scan of the subnet. A <code>ScanJob</code> is created with status <code>QUEUED</code> and the scan runs in the background.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>{
+  "message": "Scan queued for subnet 192.168.1.0/24",
+  "scan_job_id": "550e8400-e29b-41d4-a716-446655440099",
+  "status": "QUEUED"
+}</pre>
+                        <div class="curl">
+                            <code>curl -X POST -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/subnets/550e8400-.../scan</code>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- IP ADDRESSES -->
+            <!-- ============================================================ -->
+            <section id="ip-addresses">
+                <div class="endpoint-group">
+                    <h2>IP Addresses</h2>
+
+                    <!-- 12. List IPs -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/ips</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>List IP addresses with optional filters. Results are paginated.</p>
+                        <h4>Query Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-opt">optional</span> — Filter by subnet</li>
+                            <li><span class="param-name">status_filter</span> <span class="param-type">IPStatus</span> <span class="param-opt">optional</span> — Filter by status</li>
+                            <li><span class="param-name">hostname_search</span> <span class="param-type">string</span> <span class="param-opt">optional</span> — Case-insensitive substring match on hostname</li>
+                            <li><span class="param-name">limit</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Max results per page. Defaults to 100. Max 1000.</li>
+                            <li><span class="param-name">offset</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Pagination offset. Defaults to 0.</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>[
+  {
+    "id": "550e8400-...",
+    "ip": "192.168.1.50",
+    "subnet_id": "550e8400-...",
+    "status": "ACTIVE_DETECTED",
+    "hostname": "printer.local",
+    "mac_address": "AA:BB:CC:DD:EE:50",
+    "mac_vendor": "HP",
+    "open_ports": [{"port": 9100, "protocol": "tcp", "state": "open"}],
+    "discovery_method": "ARP",
+    "consecutive_misses": 0,
+    "first_seen_at": "2026-08-01T10:00:00Z",
+    "last_seen_at": "2026-09-04T08:00:00Z",
+    "last_scanned_at": "2026-09-04T08:00:00Z",
+    "custom_metadata": {}
+  }
+]</pre>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;"https://netscan.example.com/api/v1/ips?subnet_id=...&status_filter=ACTIVE_DETECTED&limit=50"</code>
+                        </div>
+                    </div>
+
+                    <!-- 13. Get Available IPs -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/ips/available</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Retrieve the next K available IPs in a subnet for automated provisioning. Returns IPs in CIDR order that are not active, reserved, or uncertain.</p>
+                        <h4>Query Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span> — Target subnet</li>
+                            <li><span class="param-name">count</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Number of IPs to return (1–50, default 1)</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>{
+  "subnet_id": "550e8400-...",
+  "cidr": "192.168.1.0/24",
+  "requested_count": 5,
+  "available_ips": [
+    "192.168.1.10",
+    "192.168.1.11",
+    "192.168.1.14",
+    "192.168.1.15",
+    "192.168.1.16"
+  ],
+  "count_returned": 5
+}</pre>
+                        <div class="callout callout-info">
+                            <strong>Note:</strong> Available IPs are those not currently in <code>ACTIVE_DETECTED</code>, <code>ASSIGNED_RESERVED</code>, or <code>UNCERTAIN_FIREWALLED</code> states. The list is sequential from the first usable host address.
+                        </div>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;"https://netscan.example.com/api/v1/ips/available?subnet_id=...&count=10"</code>
+                        </div>
+                    </div>
+
+                    <!-- 14. Get IP Detail -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/ips/{ip_address}</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Get the full detail for a single tracked IP address.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">ip_address</span> <span class="param-type">string</span> <span class="param-req">required</span> — IPv4 address, e.g. <code>192.168.1.50</code></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <p>Returns the full <code>IPAddress</code> model object.</p>
+                        <h4>Error <span class="status-badge status-404">404</span></h4>
+                        <pre>{"detail": "IP '192.168.1.50' not tracked yet."}</pre>
+                    </div>
+
+                    <!-- 15. Update IP Reservation -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-patch">PATCH</span>
+                            <span class="endpoint-path">/api/v1/ips/{ip_address}</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Reserve, unreserve, or attach custom metadata to an IP address. Setting <code>is_reserved: true</code> moves the IP to <code>ASSIGNED_RESERVED</code>. Setting <code>is_reserved: false</code> on a reserved IP moves it back to <code>AVAILABLE_CANDIDATE</code>. Changes are audit-logged.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">ip_address</span> <span class="param-type">string</span> <span class="param-req">required</span> — IPv4 address</li>
+                        </ul>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">is_reserved</span> <span class="param-type">boolean</span> <span class="param-req">required</span> — Whether to reserve the IP</li>
+                            <li><span class="param-name">custom_metadata</span> <span class="param-type">object | null</span> <span class="param-opt">optional</span> — Arbitrary JSON metadata to attach</li>
+                            <li><span class="param-name">hostname</span> <span class="param-type">string | null</span> <span class="param-opt">optional</span> — Override hostname</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <p>Returns the updated <code>IPAddress</code> model object.</p>
+                        <div class="curl">
+                            <code>curl -X PATCH -H "X-API-Key: ns_live_..." -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"is_reserved": true, "hostname": "db-primary", "custom_metadata": {"role": "database"}}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/ips/192.168.1.50</code>
+                        </div>
+                    </div>
+
+                    <!-- 16. Delete IP -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-delete">DELETE</span>
+                            <span class="endpoint-path">/api/v1/ips/{ip_address}</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Remove an IP address record from tracking. The IP will reappear on the next scan if it is responsive.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">ip_address</span> <span class="param-type">string</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-204">204</span></h4>
+                        <p>No content on success.</p>
+                    </div>
+
+                    <!-- 17. IP History -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/ips/{ip_address}/history</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Retrieve the full event history timeline for an IP address, ordered by timestamp descending.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">ip_address</span> <span class="param-type">string</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>{
+  "ip": "192.168.1.50",
+  "current_status": "ACTIVE_DETECTED",
+  "timeline": [
+    {
+      "id": "550e8400-...",
+      "event_type": "STATE_CHANGE",
+      "old_status": "AVAILABLE_CANDIDATE",
+      "new_status": "ACTIVE_DETECTED",
+      "probe_details": {"method": "ARP", "mac": "AA:BB:CC:DD:EE:50"},
+      "timestamp": "2026-08-01T10:00:00Z"
+    },
+    {
+      "id": "550e8400-...",
+      "event_type": "DISCOVERED",
+      "old_status": null,
+      "new_status": "ACTIVE_DETECTED",
+      "probe_details": {"method": "ICMP"},
+      "timestamp": "2026-07-30T08:00:00Z"
+    }
+  ]
+}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- SCANS -->
+            <!-- ============================================================ -->
+            <section id="scans">
+                <div class="endpoint-group">
+                    <h2>Scans</h2>
+
+                    <!-- 18. List Scans -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/scans</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>List scan jobs ordered by creation time (newest first). Optionally filter by subnet.</p>
+                        <h4>Query Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">subnet_id</span> <span class="param-type">UUID</span> <span class="param-opt">optional</span> — Filter by subnet</li>
+                            <li><span class="param-name">limit</span> <span class="param-type">integer</span> <span class="param-opt">optional</span> — Max results (default 50, max 200)</li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>[
+  {
+    "id": "550e8400-...",
+    "subnet_id": "550e8400-...",
+    "status": "COMPLETED",
+    "started_at": "2026-09-04T08:00:01Z",
+    "completed_at": "2026-09-04T08:02:30Z",
+    "total_ips": 254,
+    "active_ips": 42,
+    "uncertain_ips": 5,
+    "available_ips": 197,
+    "reserved_ips": 10,
+    "error_message": null,
+    "triggered_by": "SCHEDULE",
+    "created_at": "2026-09-04T08:00:00Z"
+  }
+]</pre>
+                        <div class="curl">
+                            <code>curl -H "X-API-Key: ns_live_..." \</code><br>
+                            <code>&nbsp;&nbsp;"https://netscan.example.com/api/v1/scans?subnet_id=...&limit=10"</code>
+                        </div>
+                    </div>
+
+                    <!-- 19. Get Scan -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/scans/{scan_id}</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>Get the full detail for a single scan job, including status, IP counts, and any error message.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">scan_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <p>Returns the full <code>ScanJob</code> model object with all fields: <code>id</code>, <code>subnet_id</code>, <code>status</code>, <code>started_at</code>, <code>completed_at</code>, <code>total_ips</code>, <code>active_ips</code>, <code>uncertain_ips</code>, <code>available_ips</code>, <code>reserved_ips</code>, <code>error_message</code>, <code>triggered_by</code>, <code>created_at</code>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- WEBHOOKS -->
+            <!-- ============================================================ -->
+            <section id="webhooks">
+                <div class="endpoint-group">
+                    <h2>Webhooks</h2>
+
+                    <!-- 20. List Webhooks -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-get">GET</span>
+                            <span class="endpoint-path">/api/v1/webhooks</span>
+                            <span class="auth-badge">Any Auth</span>
+                        </div>
+                        <p>List all registered webhooks. The signing secret is excluded from responses.</p>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>[
+  {
+    "id": "550e8400-...",
+    "name": "Slack Alerts",
+    "url": "https://hooks.slack.com/services/...",
+    "events": ["ip.state_changed", "scan.completed"],
+    "is_active": true,
+    "created_at": "2026-08-15T08:30:00Z"
+  }
+]</pre>
+                    </div>
+
+                    <!-- 21. Create Webhook -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/webhooks</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Create a new webhook. A signing secret is generated and returned once. SSRF protection blocks private IPs, loopback, and link-local addresses.</p>
+                        <h4>Request Body</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">name</span> <span class="param-type">string</span> <span class="param-req">required</span> — Human-readable label</li>
+                            <li><span class="param-name">url</span> <span class="param-type">string (URL)</span> <span class="param-req">required</span> — HTTPS endpoint to receive payloads</li>
+                            <li><span class="param-name">events</span> <span class="param-type">list[string]</span> <span class="param-opt">optional</span> — Event types to subscribe to. Defaults to <code>["ip.state_changed", "scan.completed"]</code>.</li>
+                            <li><span class="param-name">is_active</span> <span class="param-type">boolean</span> <span class="param-opt">optional</span> — Defaults to true</li>
+                        </ul>
+                        <h4>Available Event Types</h4>
+                        <div class="enum-values">
+                            <span>ip.state_changed</span>
+                            <span>scan.completed</span>
+                            <span>webhook.test</span>
+                        </div>
+                        <h4>Response <span class="status-badge status-201">201</span></h4>
+                        <pre>{
+  "id": "550e8400-...",
+  "name": "Slack Alerts",
+  "url": "https://hooks.slack.com/services/...",
+  "secret": "whsec_a1b2c3d4e5f6...",
+  "events": ["ip.state_changed", "scan.completed"],
+  "is_active": true,
+  "created_at": "2026-09-04T08:00:00Z",
+  "message": "Store this secret safely! It will never be shown again."
+}</pre>
+                        <div class="callout callout-warning">
+                            <strong>Security:</strong> The webhook secret is used to sign outbound payloads with HMAC-SHA256. You must verify the <code>X-NetScan-Signature</code> header at your receiver. The secret is only shown at creation time.
+                        </div>
+                        <div class="curl">
+                            <code>curl -X POST -H "X-API-Key: ns_live_..." -H "Content-Type: application/json" \</code><br>
+                            <code>&nbsp;&nbsp;-d '{"name": "Slack Alerts", "url": "https://hooks.slack.com/..."}' \</code><br>
+                            <code>&nbsp;&nbsp;https://netscan.example.com/api/v1/webhooks</code>
+                        </div>
+                    </div>
+
+                    <!-- 22. Delete Webhook -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-delete">DELETE</span>
+                            <span class="endpoint-path">/api/v1/webhooks/{webhook_id}</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Permanently delete a webhook.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">webhook_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-204">204</span></h4>
+                        <p>No content on success.</p>
+                    </div>
+
+                    <!-- 23. Test Webhook -->
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method method-post">POST</span>
+                            <span class="endpoint-path">/api/v1/webhooks/{webhook_id}/test</span>
+                            <span class="auth-badge admin">ADMIN / OPERATOR</span>
+                        </div>
+                        <p>Dispatch a test webhook payload to verify your receiver is configured correctly. The payload is signed with the webhook's HMAC-SHA256 secret.</p>
+                        <h4>Path Parameters</h4>
+                        <ul class="params-list">
+                            <li><span class="param-name">webhook_id</span> <span class="param-type">UUID</span> <span class="param-req">required</span></li>
+                        </ul>
+                        <h4>Response <span class="status-badge status-200">200</span></h4>
+                        <pre>{"message": "Test payload dispatched to https://hooks.slack.com/..."}</pre>
+                        <p>Dispatched payload (at the receiver):</p>
+                        <pre>{
+  "event": "webhook.test",
+  "test": true,
+  "message": "NetScan test webhook delivery",
+  "sample_ip": "192.168.1.100",
+  "sample_status": "ACTIVE_DETECTED"
+}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- MODELS -->
+            <!-- ============================================================ -->
+            <section id="models">
+                <div class="endpoint-group">
+                    <h2>Models &amp; Enums</h2>
+
+                    <h3>IPStatus</h3>
+                    <p>The possible states for a tracked IP address. State transitions are governed by the safe availability logic in the classifier.</p>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Value</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>ACTIVE_DETECTED</code></td><td>Host responded to the most recent probe</td></tr>
+                            <tr><td><code>AVAILABLE_CANDIDATE</code></td><td>Host is eligible for allocation. Requires both miss threshold and quarantine duration to be met.</td></tr>
+                            <tr><td><code>ASSIGNED_RESERVED</code></td><td>IP has been manually reserved via API or dashboard</td></tr>
+                            <tr><td><code>UNCERTAIN_FIREWALLED</code></td><td>Host is unresponsive. May be down or firewalled. Awaiting quarantine period before becoming available.</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="flow-diagram">
+                        <span class="flow-step active">ACTIVE_DETECTED</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step uncertain">UNCERTAIN_FIREWALLED</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step available">AVAILABLE_CANDIDATE</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step" style="border-color:var(--accent2);color:var(--accent2)">ASSIGNED_RESERVED</span>
+                    </div>
+
+                    <h3>DiscoveryMethod</h3>
+                    <p>The probe type used to detect the host.</p>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Value</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>ARP</code></td><td>ARP request (requires root/L2 access)</td></tr>
+                            <tr><td><code>ICMP</code></td><td>ICMP echo request (ping)</td></tr>
+                            <tr><td><code>TCP_SYN</code></td><td>TCP SYN stealth scan (requires root)</td></tr>
+                            <tr><td><code>TCP_CONNECT</code></td><td>Full TCP connect (unprivileged fallback)</td></tr>
+                            <tr><td><code>DNS_ONLY</code></td><td>Only DNS resolution succeeded</td></tr>
+                            <tr><td><code>MANUAL</code></td><td>Manually set via API or dashboard</td></tr>
+                            <tr><td><code>NONE</code></td><td>No probe performed yet</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>ScanStatus</h3>
+                    <p>Lifecycle states for a scan job.</p>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Value</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>QUEUED</code></td><td>Scan job created and waiting to run</td></tr>
+                            <tr><td><code>RUNNING</code></td><td>Scan is actively executing probes</td></tr>
+                            <tr><td><code>COMPLETED</code></td><td>Scan finished successfully</td></tr>
+                            <tr><td><code>FAILED</code></td><td>Scan encountered an error (see <code>error_message</code>)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>EventType</h3>
+                    <p>Categories of events recorded in the IP history timeline.</p>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Value</th><th>Description</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>DISCOVERED</code></td><td>IP first discovered during a scan</td></tr>
+                            <tr><td><code>STATE_CHANGE</code></td><td>Status transition (e.g. ACTIVE → UNCERTAIN)</td></tr>
+                            <tr><td><code>PORT_CHANGE</code></td><td>Open ports changed between scans</td></tr>
+                            <tr><td><code>RESERVED_TOGGLE</code></td><td>Manual reserve or unreserve via API/dashboard</td></tr>
+                            <tr><td><code>METADATA_UPDATE</code></td><td>Custom metadata or hostname updated</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Role</h3>
+                    <p>Access control roles assigned to API keys.</p>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Value</th><th>Permissions</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>admin</code></td><td>Full access to all endpoints including API key management</td></tr>
+                            <tr><td><code>operator</code></td><td>Subnet/IP CRUD, scan triggers, webhook management. Cannot manage API keys.</td></tr>
+                            <tr><td><code>read_only</code></td><td>List and view all resources. No mutations.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- RATE LIMITING -->
+            <!-- ============================================================ -->
+            <section id="rate-limiting">
+                <div class="endpoint-group">
+                    <h2>Rate Limiting</h2>
+                    <p>NetScan applies global rate limiting via <code>slowapi</code>. All <code>/api/v1</code> endpoints are subject to rate limits.</p>
+                    <p>The <code>/health</code> endpoint is exempt from rate limiting.</p>
+                    <div class="callout callout-info">
+                        <strong>Note:</strong> Rate limits are applied per client IP. If you are building an integration that makes high-frequency requests, consider batching operations or increasing the limit in your deployment configuration.
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- ERROR RESPONSES -->
+            <!-- ============================================================ -->
+            <section id="errors">
+                <div class="endpoint-group">
+                    <h2>Error Responses</h2>
+                    <p>NetScan returns standard HTTP error responses with a consistent JSON body.</p>
+
+                    <h3>Error Format</h3>
+                    <pre>{
+  "detail": "Human-readable error message"
+}</pre>
+
+                    <h3>Common Status Codes</h3>
+                    <table class="model-table">
+                        <thead>
+                            <tr><th>Status</th><th>Meaning</th><th>Cause</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>400</code></td><td>Bad Request</td><td>Invalid CIDR, duplicate subnet, malformed body</td></tr>
+                            <tr><td><code>401</code></td><td>Unauthorized</td><td>Missing or invalid <code>X-API-Key</code> header</td></tr>
+                            <tr><td><code>403</code></td><td>Forbidden</td><td>Insufficient role permissions, or bootstrap attempted with existing keys</td></tr>
+                            <tr><td><code>404</code></td><td>Not Found</td><td>Resource does not exist</td></tr>
+                            <tr><td><code>422</code></td><td>Unprocessable Entity</td><td>Request body failed validation (FastAPI/Pydantic)</td></tr>
+                            <tr><td><code>429</code></td><td>Too Many Requests</td><td>Rate limit exceeded</td></tr>
+                            <tr><td><code>500</code></td><td>Internal Server Error</td><td>Unexpected failure</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Example Error Responses</h3>
+
+                    <h4>Missing API Key</h4>
+                    <pre>{
+  "detail": "Not authenticated"
+}</pre>
+
+                    <h4>Insufficient Permissions</h4>
+                    <pre>{
+  "detail": "Operation requires admin role"
+}</pre>
+
+                    <h4>Resource Not Found</h4>
+                    <pre>{
+  "detail": "Subnet not found"
+}</pre>
+
+                    <h4>Validation Error (FastAPI)</h4>
+                    <pre>{
+  "detail": [
+    {
+      "loc": ["body", "cidr"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}</pre>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', function() {
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        this.classList.add('active');
+    });
+});
+</script>
+
+</body>
+</html>

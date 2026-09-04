@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — NetScan</title>
+    <meta name="description" content="Usage guide for the NetScan HTMX dashboard — IP matrix grid, inspector drawer, scan monitor, and subnet management.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <a href="index.html" class="logo"><span>Net</span>Scan</a>
+        <div class="nav-links">
+            <a href="docs.html">Docs</a>
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="api.html">API</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-outline" target="_blank">GitHub</a>
+        </div>
+    </div>
+</nav>
+
+<div class="docs-page">
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">
+                    <h4>Dashboard Guide</h4>
+                    <a href="#overview">Overview</a>
+                    <a href="#auth">Authentication</a>
+                    <a href="#subnets">Subnet Overview</a>
+                    <a href="#inspector">IP Inspector</a>
+                    <a href="#creating">Creating Subnets</a>
+                    <a href="#scanning">Running Scans</a>
+                    <a href="#ip-management">IP Management</a>
+                    <a href="#settings">Settings</a>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Reference</h4>
+                    <a href="#shortcuts">Keyboard Shortcuts</a>
+                    <a href="#tips">Tips</a>
+                </div>
+            </nav>
+        </aside>
+
+        <div class="docs-content">
+
+            <section id="overview">
+                <h1>Dashboard Usage Guide</h1>
+                <p>The NetScan dashboard is a fully server-rendered, HTMX-powered interface for managing subnets, inspecting IP states, triggering scans, and monitoring background jobs. There is no JavaScript build step &mdash; the UI is served directly by FastAPI and updated via HTMX partial swaps.</p>
+
+                <h3>Access URLs</h3>
+                <p>Once the dev server is running, the following endpoints are available:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>URL</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>localhost:8000</code></td>
+                            <td>Dashboard home &mdash; redirect to login or subnet list</td>
+                        </tr>
+                        <tr>
+                            <td><code>localhost:8000/docs</code></td>
+                            <td>Interactive OpenAPI / Swagger documentation</td>
+                        </tr>
+                        <tr>
+                            <td><code>localhost:8000/redoc</code></td>
+                            <td>ReDoc API reference</td>
+                        </tr>
+                        <tr>
+                            <td><code>localhost:8000/health</code></td>
+                            <td>System health endpoint (returns JSON status)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>Note:</strong> The dashboard is protected behind session-based authentication. You must log in before accessing any dashboard page. The <code>/health</code> endpoint is exempt from rate limiting but does not require authentication.
+                </div>
+            </section>
+
+            <section id="auth">
+                <h1>Authentication</h1>
+                <p>The dashboard uses session-based authentication via the <code>DASHBOARD_PASSWORD</code> environment variable. This is separate from the API key authentication used by the REST endpoints.</p>
+
+                <h3>Login Flow</h3>
+                <ol>
+                    <li>Navigate to <code>localhost:8000</code> and you will be redirected to <code>/login</code>.</li>
+                    <li>Enter the <code>DASHBOARD_PASSWORD</code> and a valid, active API key.</li>
+                    <li>On success, the server stores the API key in a signed session cookie and redirects to the dashboard home.</li>
+                    <li>All subsequent HTMX requests automatically inject the <code>X-API-Key</code> header via a global <code>htmx:configRequest</code> event listener.</li>
+                </ol>
+
+                <h3>Session Cookies vs API Keys</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mechanism</th>
+                            <th>Used By</th>
+                            <th>Scope</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Session cookie</td>
+                            <td>Browser dashboard</td>
+                            <td>Stores the API key server-side; CSRF-protected form submissions for login</td>
+                        </tr>
+                        <tr>
+                            <td>API key header</td>
+                            <td>REST API + HTMX calls</td>
+                            <td><code>X-API-Key</code> header sent with every request; role-based (admin, operator, read_only)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-warning">
+                    <strong>Security:</strong> The login form uses CSRF tokens generated from the session ID and secret key. Tokens expire after 30 minutes. The session cookie is signed and cannot be tampered with.
+                </div>
+            </section>
+
+            <section id="subnets">
+                <h1>Subnet Overview</h1>
+                <p>The main dashboard view (<code>/</code>) displays all configured subnets as cards with live statistics and a color-coded status summary.</p>
+
+                <h3>Summary Metrics</h3>
+                <p>At the top of the page, four metric cards show aggregate counts across all subnets:</p>
+                <ul>
+                    <li><strong>Tracked Subnets</strong> &mdash; total number of configured CIDR blocks</li>
+                    <li><strong>Active Detected</strong> &mdash; IPs that responded to probes and are confirmed alive</li>
+                    <li><strong>Uncertain / Quarantine</strong> &mdash; IPs that went silent and are in quarantine before release</li>
+                    <li><strong>Available Candidates</strong> &mdash; IPs not yet assigned, reserved, or detected &mdash; safe to allocate</li>
+                </ul>
+
+                <h3>Subnet Cards</h3>
+                <p>Each subnet card shows:</p>
+                <ul>
+                    <li><strong>CIDR block</strong> and <strong>pool label</strong> (name)</li>
+                    <li>Scan interval and quarantine configuration</li>
+                    <li>Netmask and usable host count</li>
+                    <li>Color-coded status breakdown (active / uncertain / reserved / available)</li>
+                    <li>A proportional progress bar showing state distribution</li>
+                    <li>Action buttons: <strong>IP Matrix</strong> (opens the CIDR grid) and <strong>Scan Now</strong> (triggers an immediate scan)</li>
+                </ul>
+
+                <h3>CIDR Matrix Grid</h3>
+                <p>Clicking <strong>IP Matrix</strong> on a subnet card opens a dense tile grid showing every IP address in the CIDR range. Each tile is color-coded by state:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Color</th>
+                            <th>State</th>
+                            <th>Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span style="color:#4ade80">&#9632;</span></td>
+                            <td><code>ACTIVE_DETECTED</code></td>
+                            <td>Host responded to the latest probe &mdash; confirmed alive</td>
+                        </tr>
+                        <tr>
+                            <td><span style="color:#fb923c">&#9632;</span></td>
+                            <td><code>UNCERTAIN_FIREWALLED</code></td>
+                            <td>Host went silent; in quarantine period before release</td>
+                        </tr>
+                        <tr>
+                            <td><span style="color:#3b82f6">&#9632;</span></td>
+                            <td><code>ASSIGNED_RESERVED</code></td>
+                            <td>Manually reserved by an operator &mdash; will not be auto-released</td>
+                        </tr>
+                        <tr>
+                            <td><span style="color:#64748b">&#9632;</span></td>
+                            <td><code>AVAILABLE_CANDIDATE</code></td>
+                            <td>Not tracked or confirmed free &mdash; safe to allocate</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>Each tile displays the last octet of the IP address. Hover for the full address. Click any tile to open the inspector drawer.</p>
+
+                <div class="callout callout-info">
+                    <strong>Design note:</strong> The matrix grid uses responsive Tailwind columns (8 on mobile up to 32 on wide screens) with a 1.5-unit gap. Tiles scale on hover with a subtle transform effect.
+                </div>
+            </section>
+
+            <section id="inspector">
+                <h1>IP Inspector</h1>
+                <p>Clicking any IP tile in the matrix grid opens a slide-over drawer from the right side of the screen. The drawer is loaded via HTMX partial swap (<code>hx-get</code> on the IP endpoint).</p>
+
+                <h3>Details Shown</h3>
+                <p>The inspector displays the full IP record with these fields:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>ip</code></td>
+                            <td>Full IPv4 address</td>
+                        </tr>
+                        <tr>
+                            <td><code>status</code></td>
+                            <td>Current state badge (color-coded)</td>
+                        </tr>
+                        <tr>
+                            <td><code>hostname</code></td>
+                            <td>Reverse DNS hostname (if resolved)</td>
+                        </tr>
+                        <tr>
+                            <td><code>mac_address</code></td>
+                            <td>MAC address (available only via L2 ARP probes)</td>
+                        </tr>
+                        <tr>
+                            <td><code>mac_vendor</code></td>
+                            <td>Hardware vendor from MAC OUI lookup</td>
+                        </tr>
+                        <tr>
+                            <td><code>discovery_method</code></td>
+                            <td>Probe type used: ARP, ICMP, or TCP SYN</td>
+                        </tr>
+                        <tr>
+                            <td><code>consecutive_misses</code></td>
+                            <td>Number of scans in a row without a response</td>
+                        </tr>
+                        <tr>
+                            <td><code>last_seen_at</code></td>
+                            <td>Timestamp of last confirmed response</td>
+                        </tr>
+                        <tr>
+                            <td><code>last_scanned_at</code></td>
+                            <td>Timestamp of last probe attempt</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Open Ports</h3>
+                <p>If the scanner detected open TCP ports, they are listed below the properties with port number, protocol, service name, and product (if identified by nmap).</p>
+
+                <h3>Reservation Toggle</h3>
+                <p>A form at the bottom of the drawer allows you to:</p>
+                <ul>
+                    <li><strong>Lock as Reserved</strong> &mdash; toggle the IP to <code>ASSIGNED_RESERVED</code> state (prevents auto-release)</li>
+                    <li><strong>Custom Hostname</strong> &mdash; set a custom alias for the IP</li>
+                </ul>
+                <p>Changes are submitted via <code>PATCH /api/v1/ips/{ip}</code> with the session API key.</p>
+
+                <h3>Audit Timeline</h3>
+                <p>If history records exist for the IP, a scrollable timeline shows every state transition: the event type, old status, new status, and timestamp. This provides a full audit trail for compliance and debugging.</p>
+            </section>
+
+            <section id="creating">
+                <h1>Creating Subnets</h1>
+                <p>Click <strong>Add Subnet CIDR</strong> on the dashboard home to open the creation modal.</p>
+
+                <h3>Form Fields</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Required</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>cidr</code></td>
+                            <td>Yes</td>
+                            <td>&mdash;</td>
+                            <td>IPv4 CIDR block (e.g. <code>192.168.1.0/24</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>Yes</td>
+                            <td>&mdash;</td>
+                            <td>Pool label (e.g. "Server Farm", "DMZ")</td>
+                        </tr>
+                        <tr>
+                            <td><code>scan_interval_minutes</code></td>
+                            <td>No</td>
+                            <td>60</td>
+                            <td>How often to auto-scan (0 = manual only)</td>
+                        </tr>
+                        <tr>
+                            <td><code>quarantine_hours</code></td>
+                            <td>No</td>
+                            <td>48</td>
+                            <td>Hours before an uncertain IP can be released</td>
+                        </tr>
+                        <tr>
+                            <td><code>description</code></td>
+                            <td>No</td>
+                            <td>&mdash;</td>
+                            <td>Free-text notes about this subnet</td>
+                        </tr>
+                        <tr>
+                            <td><code>miss_threshold</code></td>
+                            <td>No</td>
+                            <td>3</td>
+                            <td>Consecutive misses before marking uncertain</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>CIDR Validation</h3>
+                <p>The server validates that the CIDR is a valid IPv4 block. The dashboard expands the CIDR to calculate usable host count and displays it on the subnet card after creation.</p>
+
+                <h3>What Happens After Creation</h3>
+                <ol>
+                    <li>The subnet record is persisted to the database.</li>
+                    <li>If <code>scan_interval_minutes &gt; 0</code>, the APScheduler background service automatically registers a recurring scan job.</li>
+                    <li>The dashboard refreshes to show the new subnet card with initial stats (all IPs start as <code>AVAILABLE_CANDIDATE</code>).</li>
+                </ol>
+            </section>
+
+            <section id="scanning">
+                <h1>Running Scans</h1>
+                <p>Scans can be triggered manually or run on a schedule. The scan job monitor page (<code>/scans</code>) shows execution history and real-time status.</p>
+
+                <h3>Manual Scan Trigger</h3>
+                <p>Two ways to trigger a scan:</p>
+                <ul>
+                    <li><strong>From the subnet card</strong> &mdash; click the <strong>Scan Now</strong> button. The button shows a spinner during execution and the page reloads after ~3 seconds.</li>
+                    <li><strong>From the matrix view</strong> &mdash; click <strong>Trigger Scan</strong> in the header area of the CIDR grid page.</li>
+                </ul>
+                <p>Both call <code>POST /api/v1/subnets/{id}/scan</code> via HTMX and update the UI without a full page reload.</p>
+
+                <h3>Scan Job Monitor</h3>
+                <p>Navigate to <strong>Scan Jobs</strong> in the top nav to see a table of all recent scan jobs. Each row shows:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Job ID</td>
+                            <td>Truncated UUID of the scan job</td>
+                        </tr>
+                        <tr>
+                            <td>Subnet</td>
+                            <td>CIDR block that was scanned</td>
+                        </tr>
+                        <tr>
+                            <td>Status</td>
+                            <td><code>QUEUED</code>, <code>RUNNING</code>, <code>COMPLETED</code>, or <code>FAILED</code></td>
+                        </tr>
+                        <tr>
+                            <td>Trigger</td>
+                            <td>What initiated the scan (<code>manual</code>, <code>scheduled</code>, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td>Results</td>
+                            <td>Active / Uncertain / Available counts at completion</td>
+                        </tr>
+                        <tr>
+                            <td>Started / Completed</td>
+                            <td>Timestamps for the job lifecycle</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Real-Time Updates</h3>
+                <p>Running scans display a pulsing <code>RUNNING</code> badge. The table shows up to the last 100 scan jobs. For programmatic access, use <code>GET /api/v1/scans</code> with the API key.</p>
+
+                <div class="callout callout-info">
+                    <strong>Concurrency:</strong> The scanner uses an asyncio semaphore to limit concurrent nmap processes. Multiple scan jobs may be queued, but only a configured number execute in parallel.
+                </div>
+            </section>
+
+            <section id="ip-management">
+                <h1>IP Management</h1>
+                <p>The dashboard provides visual tools for managing IP reservations and understanding state transitions.</p>
+
+                <h3>Reserving IPs</h3>
+                <ol>
+                    <li>Open the matrix grid for the target subnet.</li>
+                    <li>Click the IP tile you want to reserve.</li>
+                    <li>In the inspector drawer, toggle <strong>Lock as Assigned / Reserved</strong>.</li>
+                    <li>Optionally set a custom hostname or alias.</li>
+                    <li>Click <strong>Save Changes</strong>.</li>
+                </ol>
+                <p>The IP transitions to <code>ASSIGNED_RESERVED</code> and will not be auto-released by the quarantine system. It also will not appear as an available candidate for provisioning.</p>
+
+                <h3>Releasing Reserved IPs</h3>
+                <p>To release a reserved IP, follow the same steps above but uncheck the <strong>Lock as Assigned / Reserved</strong> toggle. The IP returns to <code>AVAILABLE_CANDIDATE</code> and will be considered for allocation again.</p>
+
+                <h3>Viewing IP History</h3>
+                <p>The <strong>Audit Log &amp; State Transitions</strong> section in the inspector drawer shows a scrollable timeline of every state change for the IP. Each entry includes:</p>
+                <ul>
+                    <li><strong>Event type</strong> &mdash; what triggered the change (scan result, manual reservation, etc.)</li>
+                    <li><strong>Old status &rarr; New status</strong> &mdash; the state transition</li>
+                    <li><strong>Timestamp</strong> &mdash; when the transition occurred</li>
+                </ul>
+
+                <h3>Understanding State Transitions</h3>
+                <p>The following diagram shows the normal lifecycle of an IP address in NetScan:</p>
+
+                <div class="flow-diagram">
+                    <span class="flow-step available">AVAILABLE_CANDIDATE</span>
+                    <span class="flow-arrow">&rarr;</span>
+                    <span class="flow-step active">ACTIVE_DETECTED</span>
+                    <span class="flow-arrow">&rarr;</span>
+                    <span class="flow-step uncertain">UNCERTAIN_FIREWALLED</span>
+                    <span class="flow-arrow">&rarr;</span>
+                    <span class="flow-step available">AVAILABLE_CANDIDATE</span>
+                </div>
+                <p style="color:var(--muted);font-size:.85rem;margin-top:8px">An IP can also be manually set to <strong>ASSIGNED_RESERVED</strong> from any active or uncertain state. Reserved IPs skip the quarantine logic entirely.</p>
+            </section>
+
+            <section id="settings">
+                <h1>Settings</h1>
+                <p>The Settings page (<code>/settings</code>) provides management for API keys and outbound webhook integrations.</p>
+
+                <h3>API Key Management</h3>
+                <p>View all existing API keys with their name, prefix, role, and last-used timestamp. From this page you can:</p>
+                <ul>
+                    <li><strong>Generate Key</strong> &mdash; create a new key with a label and role (admin, operator, read_only)</li>
+                    <li><strong>Revoke Key</strong> &mdash; permanently deactivate a key (via <code>DELETE /api/v1/auth/keys/{id}</code>)</li>
+                </ul>
+                <p>Generated keys are shown once at creation time. The dashboard stores only the prefix and hash.</p>
+
+                <h3>Webhook Configuration</h3>
+                <p>Register outbound webhooks to receive HMAC-SHA256 signed JSON payloads when IP state changes occur. For each webhook you can:</p>
+                <ul>
+                    <li><strong>Register Webhook</strong> &mdash; provide a name and endpoint URL; a signing secret is generated automatically</li>
+                    <li><strong>Test Payload</strong> &mdash; send a test event to verify connectivity</li>
+                    <li><strong>Delete</strong> &mdash; remove a webhook endpoint</li>
+                </ul>
+                <p>The signing secret is displayed only once at creation. Webhook payloads include the full IP object and are signed with HMAC-SHA256 for verification at the receiver.</p>
+
+                <h3>System Health</h3>
+                <p>Access <code>GET /health</code> for a JSON response indicating system status. This endpoint is exempt from rate limiting and is useful for uptime monitoring and load balancer health checks.</p>
+            </section>
+
+            <section id="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+                <p>The dashboard relies on browser-native navigation and HTMX partial updates. While there are no custom keyboard shortcuts, these patterns improve efficiency:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Navigate between nav links</td>
+                            <td><code>Tab</code> / <code>Shift+Tab</code> to focus, <code>Enter</code> to activate</td>
+                        </tr>
+                        <tr>
+                            <td>Focus the IP matrix grid</td>
+                            <td>Click any tile; arrow keys move focus in most browsers</td>
+                        </tr>
+                        <tr>
+                            <td>Close the inspector drawer</td>
+                            <td>Click the <strong>X</strong> button, or press <code>Esc</code> if focused</td>
+                        </tr>
+                        <tr>
+                            <td>Close a modal</td>
+                            <td>Click the backdrop, click <strong>Cancel</strong>, or press <code>Esc</code></td>
+                        </tr>
+                        <tr>
+                            <td>Trigger a scan via keyboard</td>
+                            <td><code>Tab</code> to the <strong>Scan Now</strong> button, press <code>Enter</code></td>
+                        </tr>
+                        <tr>
+                            <td>Refresh the scan job list</td>
+                            <td>Browser refresh &mdash; the page is server-rendered, no client state to lose</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="tips">
+                <h1>Tips</h1>
+                <p>Best practices for using the NetScan dashboard effectively:</p>
+
+                <div class="checklist">
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Start with a small CIDR (/28 or /27) to verify probe detection works on your network before scanning large ranges.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Set <code>scan_interval_minutes</code> to 0 for subnets you only want to scan manually &mdash; avoids unnecessary nmap runs on sensitive networks.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Reserve IPs immediately after provisioning them in your infrastructure to prevent the dashboard from marking them as available.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Monitor the <strong>Uncertain / Quarantine</strong> count on subnet cards. A growing number may indicate a network issue or firewall change.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Use the IP history timeline to trace when a host went down &mdash; this helps correlate with infrastructure changes or outages.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Generate separate API keys for different integrations (CI/CD, Terraform, monitoring) so you can revoke them independently.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Register a webhook pointing to your SIEM or alerting system to get real-time notifications on state transitions.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Check <code>/health</code> from your monitoring platform to track uptime. It is exempt from rate limiting.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Use the Available IP Finder page (<code>/provision</code>) to quickly find free IPs across all subnets without manually inspecting each matrix.</div>
+                    <div class="check-item"><span class="check-icon">&#10003;</span> Keep the <code>DASHBOARD_PASSWORD</code> strong and unique. The session is signed with <code>SECRET_KEY</code> &mdash; both must be set in production.</div>
+                </div>
+
+                <div class="callout callout-danger">
+                    <strong>Warning:</strong> Never share the dashboard session cookie or expose the dashboard on a public network without TLS. The session transmits the API key in a signed cookie, and all HTMX requests inject it into headers automatically.
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

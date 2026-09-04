@@ -1,0 +1,80 @@
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--text:#e4e4e7;--muted:#71717a;--accent:#22d3ee;--accent2:#a78bfa;--green:#4ade80;--orange:#fb923c;--red:#f87171}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+code{background:rgba(34,211,238,.1);padding:2px 6px;border-radius:4px;font-size:.85em;font-family:'SF Mono',Fira Code,monospace;color:var(--accent)}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font-size:1.25rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}.logo span{color:var(--accent)}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--muted);font-size:.875rem;font-weight:500;transition:color .2s}.nav-links a:hover,.nav-links a.active{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:.875rem;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--accent);color:#000}.btn-primary:hover{background:#06b6d4;text-decoration:none}
+.btn-outline{border:1px solid var(--border);color:var(--text)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;font-family:'SF Mono',Fira Code,monospace;font-size:.85rem;overflow-x:auto;margin:16px 0;line-height:1.7}
+.code-block .comment{color:var(--muted)}.code-block .cmd{color:var(--accent)}.code-block .flag{color:var(--accent2)}.code-block .str{color:var(--green)}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+td code{font-size:.8em}
+
+.callout{padding:16px 20px;border-radius:8px;margin:16px 0;font-size:.9rem;border-left:3px solid}
+.callout-info{background:rgba(34,211,238,.05);border-color:var(--accent)}
+.callout-warning{background:rgba(251,146,60,.05);border-color:var(--orange)}
+.callout-danger{background:rgba(248,113,113,.05);border-color:var(--red)}
+
+.checklist{margin:16px 0}.check-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.9rem}.check-icon{color:var(--green);font-weight:700;font-size:1.1rem}
+
+.flow-diagram{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0}
+.flow-step{padding:8px 16px;border:1px solid var(--border);border-radius:8px;font-size:.8rem;font-weight:600}
+.flow-step.active{border-color:var(--green);color:var(--green)}
+.flow-step.uncertain{border-color:var(--orange);color:var(--orange)}
+.flow-step.available{border-color:var(--accent);color:var(--accent)}
+.flow-arrow{color:var(--muted);font-size:1.2rem}
+
+.arch-diagram{display:flex;flex-direction:column;gap:0;align-items:center;margin:24px 0}
+.arch-box{width:280px;padding:16px;border:1px solid var(--border);border-radius:10px;text-align:center;background:var(--surface)}
+.arch-box h4{margin-bottom:4px;font-size:.95rem}.arch-box p{color:var(--muted);font-size:.8rem}
+.arch-arrow{color:var(--muted);font-size:1.5rem;padding:4px 0}
+.api-box{border-color:var(--accent)}.service-box{border-color:var(--green)}.scanner-box{border-color:var(--accent2)}.data-box{border-color:var(--orange)}
+
+.sidebar{width:220px;position:sticky;top:80px;align-self:flex-start;flex-shrink:0}
+.sidebar-nav .sidebar-section{margin-bottom:24px}
+.sidebar-nav h4{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px}
+.sidebar-nav a{display:block;padding:4px 0;font-size:.85rem;color:var(--muted);transition:color .2s}.sidebar-nav a:hover{color:var(--text);text-decoration:none}
+
+.docs-page .container{display:flex;gap:40px;padding-top:100px;padding-bottom:80px}
+.docs-content{flex:1;min-width:0}
+.docs-content section{margin-bottom:60px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.docs-content section:last-child{border:none}
+.docs-content h1{font-size:1.8rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+.docs-content h3{font-size:1.1rem;font-weight:600;margin:24px 0 8px;color:var(--text)}
+.docs-content p{color:var(--muted);margin-bottom:12px}
+.docs-content ol,.docs-content ul{margin:12px 0 12px 20px;color:var(--muted)}.docs-content li{margin-bottom:6px}
+
+.endpoint-group{margin-bottom:40px}
+.endpoint-group h2{font-size:1.3rem;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.endpoint{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.endpoint-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.method{padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700;font-family:monospace;text-transform:uppercase}
+.method-get{background:rgba(74,222,128,.15);color:var(--green)}
+.method-post{background:rgba(34,211,238,.15);color:var(--accent)}
+.method-patch{background:rgba(251,146,60,.15);color:var(--orange)}
+.method-delete{background:rgba(248,113,113,.15);color:var(--red)}
+.endpoint-path{font-family:'SF Mono',monospace;font-size:.9rem;color:var(--text)}
+.auth-badge{font-size:.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);color:var(--muted)}
+.auth-badge.admin{border-color:var(--orange);color:var(--orange)}
+.endpoint p{font-size:.875rem;color:var(--muted);margin-bottom:10px}
+.endpoint h4{font-size:.85rem;font-weight:600;margin:12px 0 6px;color:var(--text)}
+.param-table{font-size:.85rem}
+
+.hero-sub{font-size:1.1rem;color:var(--muted);margin-bottom:8px}
+
+@media(max-width:768px){
+    .sidebar{display:none}
+    .docs-page .container{flex-direction:column}
+}

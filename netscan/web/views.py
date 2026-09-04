@@ -1,14 +1,24 @@
 import uuid
 from pathlib import Path
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlmodel import Session, select
+
 from netscan.api.auth import hash_key
 from netscan.config import settings
 from netscan.db import get_session
-from netscan.models import ApiKey, IPAddress, IPHistory, IPStatus, ScanJob, Subnet, Webhook
+from netscan.models import (
+    ApiKey,
+    IPAddress,
+    IPHistory,
+    IPStatus,
+    ScanJob,
+    Subnet,
+    Webhook,
+)
 from netscan.scanner.cidr import expand_cidr_hosts, get_subnet_metadata
 
 templates_path = Path(__file__).parent / "templates"

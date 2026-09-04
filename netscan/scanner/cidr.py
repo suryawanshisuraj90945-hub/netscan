@@ -1,5 +1,4 @@
 import ipaddress
-from typing import List, Tuple
 
 
 def validate_and_normalize_cidr(cidr_str: str) -> str:
@@ -11,7 +10,7 @@ def validate_and_normalize_cidr(cidr_str: str) -> str:
         raise ValueError(f"Invalid IPv4 CIDR '{cidr_str}': {e}") from e
 
 
-def expand_cidr_hosts(cidr_str: str, include_network_broadcast: bool = False) -> List[str]:
+def expand_cidr_hosts(cidr_str: str, include_network_broadcast: bool = False) -> list[str]:
     """
     Expand a CIDR block into a list of host IP address strings.
     For /31 and /32, returns all addresses.

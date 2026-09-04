@@ -1,6 +1,8 @@
 import re
+
 import pytest
 from fastapi.testclient import TestClient
+
 from netscan.main import app
 from netscan.models import Subnet
 
@@ -295,6 +297,7 @@ def test_session_middleware_uses_configured_secret_key():
     # Verify the app was constructed with the config value (not the fallback string)
     # by checking that main.py passes settings.SECRET_KEY directly
     import inspect
+
     import netscan.main as main_module
     source = inspect.getsource(main_module)
     assert '"dev-fallback-secret"' not in source, \

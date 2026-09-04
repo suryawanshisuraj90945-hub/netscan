@@ -2,11 +2,11 @@ import asyncio
 import os
 import shutil
 import socket
-import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from netscan.config import settings
 from netscan.models import DiscoveryMethod
 
@@ -16,10 +16,10 @@ class PortInfo:
     port: int
     protocol: str
     state: str
-    service: Optional[str] = None
-    product: Optional[str] = None
-    version: Optional[str] = None
-    reason: Optional[str] = None
+    service: str | None = None
+    product: str | None = None
+    version: str | None = None
+    reason: str | None = None
 
 
 @dataclass
@@ -28,11 +28,11 @@ class HostProbeResult:
     is_up: bool
     status_reason: str
     discovery_method: DiscoveryMethod
-    hostname: Optional[str] = None
-    mac_address: Optional[str] = None
-    mac_vendor: Optional[str] = None
-    open_ports: List[PortInfo] = field(default_factory=list)
-    raw_extra: Dict[str, Any] = field(default_factory=dict)
+    hostname: str | None = None
+    mac_address: str | None = None
+    mac_vendor: str | None = None
+    open_ports: list[PortInfo] = field(default_factory=list)
+    raw_extra: dict[str, Any] = field(default_factory=dict)
     scanned_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -55,7 +55,7 @@ class NmapScanner:
         except (PermissionError, OSError):
             return False
 
-    def build_nmap_args(self, target: str, scan_ports: bool = True) -> List[str]:
+    def build_nmap_args(self, target: str, scan_ports: bool = True) -> list[str]:
         """Construct Nmap CLI arguments based on privileges and port probing requirements."""
         if not self.nmap_path:
             raise RuntimeError("Nmap binary not found on system PATH. Please install nmap.")
@@ -79,7 +79,7 @@ class NmapScanner:
         args.append(target)
         return args
 
-    async def scan_cidr(self, cidr: str, scan_ports: bool = True) -> Dict[str, HostProbeResult]:
+    async def scan_cidr(self, cidr: str, scan_ports: bool = True) -> dict[str, HostProbeResult]:
         """Execute Nmap scan on target CIDR and parse results into HostProbeResult objects."""
         args = self.build_nmap_args(cidr, scan_ports=scan_ports)
 
@@ -104,9 +104,9 @@ class NmapScanner:
 
         return self.parse_nmap_xml(stdout.decode(errors="replace"))
 
-    def parse_nmap_xml(self, xml_content: str) -> Dict[str, HostProbeResult]:
+    def parse_nmap_xml(self, xml_content: str) -> dict[str, HostProbeResult]:
         """Parse Nmap XML string into a mapping of IP -> HostProbeResult."""
-        results: Dict[str, HostProbeResult] = {}
+        results: dict[str, HostProbeResult] = {}
         if not xml_content.strip():
             return results
 
@@ -124,9 +124,9 @@ class NmapScanner:
             reason = status_elem.get("reason", "unknown")
             is_up = (state == "up")
 
-            ip_address: Optional[str] = None
-            mac_address: Optional[str] = None
-            mac_vendor: Optional[str] = None
+            ip_address: str | None = None
+            mac_address: str | None = None
+            mac_vendor: str | None = None
 
             for addr in host_elem.findall("address"):
                 addr_type = addr.get("addrtype")
@@ -139,7 +139,7 @@ class NmapScanner:
             if not ip_address:
                 continue
 
-            hostname: Optional[str] = None
+            hostname: str | None = None
             hostnames_elem = host_elem.find("hostnames")
             if hostnames_elem is not None:
                 first_h = hostnames_elem.find("hostname")
@@ -148,7 +148,7 @@ class NmapScanner:
 
             discovery_method = self._map_reason_to_method(reason, mac_address is not None)
 
-            open_ports: List[PortInfo] = []
+            open_ports: list[PortInfo] = []
             ports_elem = host_elem.find("ports")
             if ports_elem is not None:
                 for port_elem in ports_elem.findall("port"):
@@ -158,9 +158,9 @@ class NmapScanner:
                     port_state = port_state_elem.get("state", "closed") if port_state_elem is not None else "closed"
                     port_reason = port_state_elem.get("reason", "") if port_state_elem is not None else ""
 
-                    service_name: Optional[str] = None
-                    product: Optional[str] = None
-                    version: Optional[str] = None
+                    service_name: str | None = None
+                    product: str | None = None
+                    version: str | None = None
                     service_elem = port_elem.find("service")
                     if service_elem is not None:
                         service_name = service_elem.get("name")

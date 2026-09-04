@@ -5,8 +5,9 @@ import sys
 import uuid
 
 import pytest
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
 from netscan.models import Webhook
 from netscan.services.webhook_service import WebhookDispatcher
 

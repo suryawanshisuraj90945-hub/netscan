@@ -1,9 +1,10 @@
 import hashlib
 import secrets
-from typing import Optional
+
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from sqlmodel import Session, select
+
 from netscan.db import get_session
 from netscan.models import ApiKey, Role, utc_now
 
@@ -37,9 +38,9 @@ def hash_key(raw_key: str) -> str:
 
 
 async def get_current_api_key(
-    header_key: Optional[str] = Security(api_key_header),
+    header_key: str | None = Security(api_key_header),
     session: Session = Depends(get_session),
-) -> Optional[ApiKey]:
+) -> ApiKey | None:
     """Validate API key. No keys in DB = no access (create first key via CLI or direct DB)."""
     if not header_key:
         raise HTTPException(

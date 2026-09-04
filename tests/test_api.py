@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+
 from netscan.main import app
 from netscan.models import DiscoveryMethod, IPAddress, IPStatus, Role, Subnet
 
@@ -115,6 +116,7 @@ def test_api_key_management(auth_client):
 
 def seed_ip(engine, subnet_id, ip, status=IPStatus.AVAILABLE_CANDIDATE, **kwargs):
     from sqlmodel import Session
+
     from netscan.models import IPAddress
 
     with Session(engine) as session:
@@ -127,7 +129,9 @@ def seed_ip(engine, subnet_id, ip, status=IPStatus.AVAILABLE_CANDIDATE, **kwargs
 
 def seed_subnet(engine, cidr="192.168.77.0/29"):
     import uuid
+
     from sqlmodel import Session
+
     from netscan.models import Subnet
 
     with Session(engine) as session:

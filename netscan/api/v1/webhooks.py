@@ -1,10 +1,10 @@
-import asyncio
 import secrets
 import uuid
-from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import AnyHttpUrl, BaseModel
 from sqlmodel import Session, select
+
 from netscan.api.auth import get_current_api_key, require_role
 from netscan.db import get_session
 from netscan.models import Role, Webhook
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 class WebhookCreate(BaseModel):
     name: str
     url: AnyHttpUrl
-    events: List[str] = ["ip.state_changed", "scan.completed"]
+    events: list[str] = ["ip.state_changed", "scan.completed"]
     is_active: bool = True
 
 
@@ -24,12 +24,12 @@ class WebhookResponse(BaseModel):
     id: uuid.UUID
     name: str
     url: str
-    events: List[str]
+    events: list[str]
     is_active: bool
     created_at: str
 
 
-@router.get("", response_model=List[WebhookResponse])
+@router.get("", response_model=list[WebhookResponse])
 def list_webhooks(
     session: Session = Depends(get_session),
     current_user=Depends(get_current_api_key),
@@ -88,7 +88,6 @@ def delete_webhook(
         raise HTTPException(status_code=404, detail="Webhook not found")
     session.delete(wh)
     session.commit()
-    return None
 
 
 @router.post("/{webhook_id}/test")

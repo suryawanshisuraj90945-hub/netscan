@@ -1,7 +1,8 @@
 import uuid
-from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
+
 from netscan.api.auth import get_current_api_key
 from netscan.db import get_session
 from netscan.models import ScanJob
@@ -9,9 +10,9 @@ from netscan.models import ScanJob
 router = APIRouter(prefix="/scans", tags=["Scans"])
 
 
-@router.get("", response_model=List[ScanJob])
+@router.get("", response_model=list[ScanJob])
 def list_scans(
-    subnet_id: Optional[uuid.UUID] = None,
+    subnet_id: uuid.UUID | None = None,
     limit: int = Query(default=50, le=200),
     session: Session = Depends(get_session),
     current_user=Depends(get_current_api_key),

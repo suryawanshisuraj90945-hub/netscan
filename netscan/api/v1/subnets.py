@@ -1,13 +1,28 @@
 import asyncio
 import uuid
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
+
 from netscan.api.auth import get_current_api_key, require_role
 from netscan.db import get_session
-from netscan.models import IPAddress, IPStatus, Role, ScanJob, ScanStatus, Subnet, TriggerType, utc_now
-from netscan.scanner.cidr import expand_cidr_hosts, get_subnet_metadata, validate_and_normalize_cidr
+from netscan.models import (
+    IPAddress,
+    IPStatus,
+    Role,
+    ScanJob,
+    ScanStatus,
+    Subnet,
+    TriggerType,
+    utc_now,
+)
+from netscan.scanner.cidr import (
+    expand_cidr_hosts,
+    get_subnet_metadata,
+    validate_and_normalize_cidr,
+)
 from netscan.services.scan_service import scan_service
 from netscan.services.scheduler_service import scheduler
 
@@ -17,7 +32,7 @@ router = APIRouter(prefix="/subnets", tags=["Subnets"])
 class SubnetCreate(BaseModel):
     cidr: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     scan_interval_minutes: int = 60
     miss_threshold: int = 3
     quarantine_hours: int = 48
@@ -25,15 +40,15 @@ class SubnetCreate(BaseModel):
 
 
 class SubnetUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    scan_interval_minutes: Optional[int] = None
-    miss_threshold: Optional[int] = None
-    quarantine_hours: Optional[int] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    scan_interval_minutes: int | None = None
+    miss_threshold: int | None = None
+    quarantine_hours: int | None = None
+    is_active: bool | None = None
 
 
-@router.get("", response_model=List[Dict[str, Any]])
+@router.get("", response_model=list[dict[str, Any]])
 def list_subnets(
     session: Session = Depends(get_session),
     current_user=Depends(get_current_api_key),
@@ -152,7 +167,6 @@ def delete_subnet(
     scheduler.remove_subnet_job(subnet.id)
     session.delete(subnet)
     session.commit()
-    return None
 
 
 @router.get("/{subnet_id}/matrix")

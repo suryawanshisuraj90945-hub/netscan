@@ -1,8 +1,10 @@
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
+
 from netscan.api.auth import get_current_api_key, require_role
 from netscan.db import get_session
 from netscan.models import (
@@ -20,15 +22,15 @@ router = APIRouter(prefix="/ips", tags=["IP Addresses"])
 
 class IPReservationUpdate(BaseModel):
     is_reserved: bool
-    custom_metadata: Optional[Dict[str, Any]] = None
-    hostname: Optional[str] = None
+    custom_metadata: dict[str, Any] | None = None
+    hostname: str | None = None
 
 
-@router.get("", response_model=List[Dict[str, Any]])
+@router.get("", response_model=list[dict[str, Any]])
 def list_ips(
-    subnet_id: Optional[uuid.UUID] = None,
-    status_filter: Optional[IPStatus] = None,
-    hostname_search: Optional[str] = None,
+    subnet_id: uuid.UUID | None = None,
+    status_filter: IPStatus | None = None,
+    hostname_search: str | None = None,
     limit: int = Query(default=100, le=1000),
     offset: int = 0,
     session: Session = Depends(get_session),
@@ -88,7 +90,7 @@ def get_available_ips(
     )
     unavailable_ips = {rec.ip for rec in session.exec(unavailable_query).all()}
 
-    available_candidates: List[str] = []
+    available_candidates: list[str] = []
     for host in all_hosts:
         if host not in unavailable_ips:
             available_candidates.append(host)
@@ -173,7 +175,6 @@ def delete_ip(
         raise HTTPException(status_code=404, detail=f"IP '{ip_address}' not found.")
     session.delete(rec)
     session.commit()
-    return None
 
 
 @router.get("/{ip_address}/history")

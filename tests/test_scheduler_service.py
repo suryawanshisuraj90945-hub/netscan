@@ -2,8 +2,9 @@ import sys
 import uuid
 
 import pytest
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
 from netscan.models import ScanJob, ScanStatus, Subnet, TriggerType
 from netscan.services.scheduler_service import ScanScheduler
 

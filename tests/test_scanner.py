@@ -1,7 +1,7 @@
+import pytest
+
 from netscan.models import DiscoveryMethod
 from netscan.scanner.runner import NmapScanner
-
-import pytest
 
 SAMPLE_NMAP_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE nmaprun>

@@ -1,9 +1,10 @@
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import Session, select
+
 from netscan.db import engine
 from netscan.models import ScanJob, ScanStatus, Subnet, TriggerType
 from netscan.services.scan_service import scan_service

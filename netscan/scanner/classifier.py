@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from netscan.models import DiscoveryMethod, EventType, IPAddress, IPStatus, Subnet
 from netscan.scanner.runner import HostProbeResult
 
@@ -11,19 +12,19 @@ from netscan.scanner.runner import HostProbeResult
 class ClassificationOutcome:
     ip: str
     new_status: IPStatus
-    old_status: Optional[IPStatus]
+    old_status: IPStatus | None
     state_changed: bool
     consecutive_misses: int
-    hostname: Optional[str]
-    mac_address: Optional[str]
-    mac_vendor: Optional[str]
-    open_ports: List[Dict[str, Any]]
+    hostname: str | None
+    mac_address: str | None
+    mac_vendor: str | None
+    open_ports: list[dict[str, Any]]
     discovery_method: DiscoveryMethod
-    first_seen_at: Optional[datetime]
-    last_seen_at: Optional[datetime]
+    first_seen_at: datetime | None
+    last_seen_at: datetime | None
     last_scanned_at: datetime
-    event_type: Optional[EventType] = None
-    event_details: Optional[Dict[str, Any]] = None
+    event_type: EventType | None = None
+    event_details: dict[str, Any] | None = None
 
 
 class StateClassifier:
@@ -32,10 +33,10 @@ class StateClassifier:
     @staticmethod
     def classify(
         ip: str,
-        existing: Optional[IPAddress],
-        probe: Optional[HostProbeResult],
+        existing: IPAddress | None,
+        probe: HostProbeResult | None,
         subnet: Subnet,
-        now: Optional[datetime] = None,
+        now: datetime | None = None,
     ) -> ClassificationOutcome:
         now = now or datetime.now(timezone.utc)
         old_status = existing.status if existing else None

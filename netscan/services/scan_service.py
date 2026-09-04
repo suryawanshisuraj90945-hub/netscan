@@ -2,18 +2,17 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+
 from sqlmodel import Session, select
+
 from netscan.db import engine
 from netscan.models import (
-    EventType,
     IPAddress,
     IPHistory,
     IPStatus,
     ScanJob,
     ScanStatus,
     Subnet,
-    TriggerType,
 )
 from netscan.scanner.cidr import expand_cidr_hosts
 from netscan.scanner.classifier import StateClassifier
@@ -103,7 +102,7 @@ class ScanService:
 
                 # Fetch existing IP records for this subnet
                 existing_ips_query = select(IPAddress).where(IPAddress.subnet_id == subnet.id)
-                existing_ips_map: Dict[str, IPAddress] = {
+                existing_ips_map: dict[str, IPAddress] = {
                     ip_rec.ip: ip_rec for ip_rec in session.exec(existing_ips_query).all()
                 }
 
@@ -112,7 +111,7 @@ class ScanService:
                 uncertain_count = 0
                 available_count = 0
                 reserved_count = 0
-                state_change_events: List[Dict] = []
+                state_change_events: list[dict] = []
 
                 for ip_str in all_hosts:
                     existing_rec = existing_ips_map.get(ip_str)

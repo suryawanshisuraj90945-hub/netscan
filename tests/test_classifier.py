@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+
 from netscan.models import DiscoveryMethod, EventType, IPAddress, IPStatus, Subnet
 from netscan.scanner.classifier import StateClassifier
 from netscan.scanner.runner import HostProbeResult, PortInfo

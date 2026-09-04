@@ -5,7 +5,7 @@ import json
 import logging
 import socket
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -131,7 +131,7 @@ class WebhookDispatcher:
     async def dispatch_event(
         cls,
         event_name: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         session: Session,
     ) -> None:
         statement = select(Webhook).where(Webhook.is_active == True)

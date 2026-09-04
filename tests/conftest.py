@@ -1,11 +1,13 @@
 import os
 import socket
+
 os.environ.setdefault("DEBUG", "true")
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
 from netscan.db import get_session
 from netscan.main import app
 from netscan.models import Role

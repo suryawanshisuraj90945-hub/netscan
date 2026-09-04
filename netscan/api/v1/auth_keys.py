@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
+
 from netscan.api.auth import generate_api_key, get_current_api_key, require_role
 from netscan.db import get_session
 from netscan.models import ApiKey, Role
@@ -22,11 +23,11 @@ class ApiKeyResponse(BaseModel):
     prefix: str
     role: Role
     is_active: bool
-    last_used_at: Optional[datetime]
+    last_used_at: datetime | None
     created_at: datetime
 
 
-@router.get("", response_model=List[ApiKeyResponse])
+@router.get("", response_model=list[ApiKeyResponse])
 def list_keys(
     session: Session = Depends(get_session),
     current_user=Depends(get_current_api_key),
@@ -106,4 +107,3 @@ def revoke_key(
         raise HTTPException(status_code=404, detail="API Key not found")
     session.delete(rec)
     session.commit()
-    return None

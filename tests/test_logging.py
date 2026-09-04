@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
-from netscan.main import JsonFormatter, configure_logging
 from netscan.config import settings
+from netscan.main import JsonFormatter, configure_logging
 
 
 class TestJsonFormatter:

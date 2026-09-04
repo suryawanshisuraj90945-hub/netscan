@@ -4,15 +4,17 @@ import shutil
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
+from starlette.middleware.sessions import SessionMiddleware
+
 from netscan.api.v1.router import api_v1_router
 from netscan.config import settings
-from netscan.db import init_db, engine
+from netscan.db import engine, init_db
 from netscan.limiter import limiter
 from netscan.services.scheduler_service import scheduler
 from netscan.web.auth import DashboardAuthMiddleware

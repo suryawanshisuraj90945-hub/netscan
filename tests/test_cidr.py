@@ -1,4 +1,5 @@
 import pytest
+
 from netscan.scanner.cidr import (
     expand_cidr_hosts,
     get_subnet_metadata,

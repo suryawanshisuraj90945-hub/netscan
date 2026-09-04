@@ -1,103 +1,89 @@
-# NetScan
+<p align="center">
+  <h1 align="center">NetScan</h1>
+  <p align="center">Production-grade IP discovery and availability tracking platform</p>
+</p>
 
-Production-grade IP discovery and availability tracking platform.
+<p align="center">
+  <a href="https://github.com/suryawanshisuraj90945-hub/netscan/actions/workflows/ci.yml"><img src="https://github.com/suryawanshisuraj90945-hub/netscan/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/suryawanshisuraj90945-hub/netscan/releases"><img src="https://img.shields.io/github/v/release/suryawanshisuraj90945-hub/netscan" alt="Release"></a>
+  <a href="https://github.com/suryawanshisuraj90945-hub/netscan/blob/main/LICENSE"><img src="https://img.shields.io/github/license/suryawanshisuraj90945-hub/netscan" alt="License"></a>
+  <a href="https://github.com/suryawanshisuraj90945-hub/netscan/pkgs/container/netscan"><img src="https://img.shields.io/badge/container-GHCR-blue" alt="GHCR"></a>
+</p>
+
+---
 
 NetScan reconciles active network probes (L2 ARP, L3 ICMP, L4 TCP SYN) with managed subnet pools to track which IPs are active, quarantined, reserved, or available for allocation.
 
-## ⚠️ Production Security Hardening
-
-NetScan includes production security hardening. **Do not deploy without proper configuration.**
-
-### CORS (Cross-Origin Resource Sharing)
-
-- **Production:** `ALLOWED_ORIGINS="*"` is **rejected** at startup. Set specific origins like:
-  `ALLOWED_ORIGINS="https://your-domain.com,http://localhost:8080"`
-- **Development/Test:** `ALLOWED_ORIGINS="*"` is allowed when `ENVIRONMENT=development` or `ENVIRONMENT=test`
-- **Configuration:** Set via `ALLOWED_ORIGINS` environment variable or `.env` file
-
-### DEBUG mode
-
-- **Production:** `DEBUG=True` is **rejected** at startup when `ENVIRONMENT=production`
-- **Development/Test:** `DEBUG=True` is allowed when `ENVIRONMENT=development` or `ENVIRONMENT=test`
-- **Configuration:** Set via `ENVIRONMENT` and `DEBUG` environment variables
-
-### SECRET_KEY
-
-- **Production:** `SECRET_KEY` **must be set** when `DEBUG=False`
-- **Generation:** Create a strong random string (minimum 32 characters)
-- **Configuration:** Set via `SECRET_KEY` environment variable or `.env` file
-
-### DASHBOARD_PASSWORD
-
-- **Production:** Default `admin` password is **rejected**; must be changed to a strong password
-- **Configuration:** Set via `DASHBOARD_PASSWORD` environment variable or `.env` file
-
 ## Features
 
-- **Safe Availability & Quarantine** -- Avoids naive "ping failure = free" assumptions. Unresponsive hosts enter `UNCERTAIN_FIREWALLED` and are only released after meeting both miss thresholds and quarantine duration.
+- **Safe Availability & Quarantine** -- Unresponsive hosts enter `UNCERTAIN_FIREWALLED` and are only released after meeting both miss thresholds and quarantine duration. No naive "ping failed = free."
 - **Multi-Probe Engine** -- Auto-detects Linux capabilities for ARP/TCP SYN stealth sweeps, with fallback to unprivileged TCP Connect.
-- **API-First** -- Full REST API with OpenAPI docs. Programmatic subnet management, IP provisioning queries, and per-IP audit history.
+- **API-First** -- Full REST API with OpenAPI docs. Programmatic subnet management, IP provisioning queries, per-IP audit history.
 - **Outbound Webhooks** -- HMAC-SHA256 signed event notifications with full IP object snapshots.
 - **In-Process Scheduler** -- Background scanning with zero external dependencies (no Redis/Celery).
 - **HTMX Dashboard** -- Server-rendered CIDR matrix grid, IP inspector drawer, scan job monitor. No Node.js build step.
+- **Production Security** -- CORS enforcement, DEBUG protection, SSRF blocking, API-key auth with RBAC, scan concurrency limits.
 
-## Quickstart
+## Quick Start
 
-### Requirements
-
-- Python 3.10+
-- `nmap` installed on the host (`sudo apt install nmap` on Debian/Ubuntu)
-
-### Install & Run
+### Docker (Recommended)
 
 ```bash
+docker pull ghcr.io/suryawanshisuraj90945-hub/netscan:latest
+```
+
+```bash
+docker run -d -p 8000:8000 --name netscan \
+  -e ENVIRONMENT=production \
+  -e DEBUG=false \
+  -e SECRET_KEY=your-strong-random-string-min-32-chars \
+  -e DASHBOARD_PASSWORD=your-secure-password \
+  -e ALLOWED_ORIGINS=http://localhost:8000 \
+  ghcr.io/suryawanshisuraj90945-hub/netscan:latest
+```
+
+### Docker Compose
+
+```bash
+git clone https://github.com/suryawanshisuraj90945-hub/netscan.git
+cd netscan
+docker compose up -d
+```
+
+### From Source
+
+```bash
+git clone https://github.com/suryawanshisuraj90945-hub/netscan.git
+cd netscan
 pip install -e ".[test]"
 uvicorn netscan.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-- Dashboard: http://localhost:8000/
-- Swagger: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+### Requirements
 
-### Docker
+- Python 3.10+
+- `nmap` installed on host (`sudo apt install nmap` on Debian/Ubuntu)
 
-```bash
-docker build -t netscan .
-docker run -p 8000:8000 -e ENVIRONMENT=production -e SECRET_KEY=your-secret-key -e DASHBOARD_PASSWORD=your-password netscan
-```
+## Dashboard
 
-Or with docker-compose:
-
-```yaml
-services:
-  netscan:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - ENVIRONMENT=production
-      - SECRET_KEY=your-secret-key
-      - DASHBOARD_PASSWORD=your-password
-      - ALLOWED_ORIGINS=https://your-domain.com,http://localhost:8080
-      - DATABASE_URL=sqlite:///./netscan.db
-    volumes:
-      - netscan-data:/app/netscan.db
-```
-
-volumes:
-  netscan-data:
+| Page | URL |
+|------|-----|
+| Dashboard | http://localhost:8000/ |
+| Swagger UI | http://localhost:8000/docs |
+| ReDoc | http://localhost:8000/redoc |
+| Health Check | http://localhost:8000/health |
 
 ## Configuration
 
-All settings are configured via environment variables or a `.env` file in the project root.
+All settings are configured via environment variables or a `.env` file.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ENVIRONMENT` | `development` | Set to `production` for strict security. See notes below. |
-| `DEBUG` | `false` | Enable debug logging and relaxed security. Must be `false` in production. |
-| `SECRET_KEY` | *(empty)* | **Required in production.** Used for session signing. Generate a strong random string. |
-| `DATABASE_URL` | `sqlite:///./netscan.db` | Database connection string. Defaults to SQLite for development/postgres for production. |
-| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins. **`*` is rejected in production.** Set specific origins for production. |
+| `ENVIRONMENT` | `development` | `production`, `development`, or `test` |
+| `DEBUG` | `false` | Debug logging. Must be `false` in production |
+| `SECRET_KEY` | *(empty)* | **Required in production.** Session signing key |
+| `DATABASE_URL` | `sqlite:///./netscan.db` | Database connection string |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins. **`*` rejected in production** |
 | `DEFAULT_SCAN_INTERVAL_MINUTES` | `60` | Default scan interval per subnet |
 | `DEFAULT_MISS_THRESHOLD` | `3` | Consecutive misses before uncertain state |
 | `DEFAULT_QUARANTINE_HOURS` | `48` | Hours before uncertain host can become available |
@@ -105,71 +91,40 @@ All settings are configured via environment variables or a `.env` file in the pr
 | `WEBHOOK_TIMEOUT_SECONDS` | `10` | Outbound webhook timeout |
 | `WEBHOOK_MAX_RETRIES` | `3` | Webhook delivery retry count |
 
-### Production Configuration
+### Production Requirements
 
-When `ENVIRONMENT=production`:
+When `ENVIRONMENT=production`, startup **fails** if:
 
-- `DEBUG` must be `false`
-- `SECRET_KEY` must be set (non-empty)
-- `DASHBOARD_PASSWORD` must be set and must not be the default `admin`
-- `ALLOWED_ORIGINS` must not be `"*"` — set specific origins like `https://your-domain.com,http://localhost:8080`
-- Violations raise `ValueError` at startup via `Settings.validate_for_production()`
-
-### Development Configuration
-
-When `ENVIRONMENT=development`:
-
-- `DEBUG` may be `true` or `false`
-- `ALLOWED_ORIGINS="*"` is allowed
-- `SECRET_KEY` is optional (but recommended)
-- `DASHBOARD_PASSWORD` default `admin` is allowed
-
-### Test Configuration
-
-When `ENVIRONMENT=test`:
-
-- `DEBUG` may be `true`
-- `ALLOWED_ORIGINS="*"` is allowed
-- Used for pytest suite with in-memory SQLite
+- `DEBUG=True`
+- `SECRET_KEY` is empty
+- `DASHBOARD_PASSWORD` is default `admin`
+- `ALLOWED_ORIGINS="*"`
 
 ## API Key Setup
 
-All API endpoints require authentication via `X-API-Key` header. Create your first key via the bootstrap endpoint:
+All API endpoints require authentication via `X-API-Key` header.
 
 ```bash
+# Bootstrap first key
 curl -X POST http://localhost:8000/api/v1/auth/keys/bootstrap \
   -H "Content-Type: application/json" \
-  -d '{"name": "my-admin-key"}'
+  -d '{"name": "admin-key"}'
 ```
 
-The response contains your `raw_key` -- store it safely, it is never shown again. Subsequent keys require an existing key:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/keys \
-  -H "X-API-Key: <your-existing-key>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "automation-key", "role": "operator"}'
-```
+Roles: `admin` (full), `operator` (scan/read), `read_only` (read-only queries).
 
 ## API Examples
 
-**Find next available IPs (for Terraform/provisioning):**
-
 ```bash
+# Find next available IPs
 curl -H "X-API-Key: <key>" \
-  "http://localhost:8000/api/v1/ips/available?subnet_id=<SUBNET_UUID>&count=3"
-```
+  "http://localhost:8000/api/v1/ips/available?subnet_id=<ID>&count=3"
 
-**Trigger a subnet scan:**
-
-```bash
+# Trigger a subnet scan
 curl -X POST -H "X-API-Key: <key>" \
-  http://localhost:8000/api/v1/subnets/<SUBNET_UUID>/scan
-```
+  http://localhost:8000/api/v1/subnets/<ID>/scan
 
-**Inspect IP history:**
-
-```bash
+# Inspect IP history
 curl -H "X-API-Key: <key>" \
   http://localhost:8000/api/v1/ips/192.168.1.50/history
 ```
@@ -181,7 +136,27 @@ pip install -e ".[test]"
 pytest -v
 ```
 
-The test suite uses an in-memory SQLite database and does not require nmap or API keys.
+Tests use an in-memory SQLite database -- no nmap or API keys required.
+
+## Architecture
+
+```
+netscan/
+  api/v1/          # REST endpoints: subnets, ips, scans, webhooks, auth_keys
+  api/auth.py      # API key authentication (X-API-Key header)
+  scanner/         # nmap runner, CIDR utils, classifier
+  services/        # scan scheduler, webhook dispatcher
+  web/             # HTMX dashboard, Jinja2 templates
+  config.py        # Settings via pydantic-settings
+  models.py        # SQLModel schemas
+  main.py          # FastAPI app, lifespan, middleware
+tests/             # pytest suite
+alembic/           # Database migrations
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, style, and submission guide.
 
 ## License
 

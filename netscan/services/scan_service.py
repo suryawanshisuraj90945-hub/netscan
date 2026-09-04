@@ -22,6 +22,11 @@ from netscan.services.webhook_service import WebhookDispatcher
 
 logger = logging.getLogger(__name__)
 
+# Maximum concurrent nmap scans to prevent resource exhaustion
+SCAN_CONCURRENCY_LIMIT = 4
+
+_scan_semaphore = asyncio.Semaphore(SCAN_CONCURRENCY_LIMIT)
+
 
 class ScanService:
     """Executes network scans, evaluates state transitions, and records audit history."""
@@ -31,140 +36,141 @@ class ScanService:
 
     async def execute_scan(self, scan_job_id: uuid.UUID) -> None:
         """Background worker method to execute a scan job."""
-        scan_start_time = datetime.now(timezone.utc)
-        subnet_cidr = None
+        async with _scan_semaphore:
+            scan_start_time = datetime.now(timezone.utc)
+            subnet_cidr = None
 
-        with Session(engine) as session:
-            job = session.get(ScanJob, scan_job_id)
-            if not job:
-                logger.error("ScanJob not found", extra={"scan_job_id": str(scan_job_id)})
-                return
-
-            subnet = session.get(Subnet, job.subnet_id)
-            if not subnet:
-                job.status = ScanStatus.FAILED
-                job.error_message = f"Subnet {job.subnet_id} not found."
-                session.add(job)
-                session.commit()
-                return
-
-            job.status = ScanStatus.RUNNING
-            job.started_at = datetime.now(timezone.utc)
-            session.add(job)
-            session.commit()
-            subnet_cidr = subnet.cidr
-            job_subnet_id = job.subnet_id
-            triggered_by = job.triggered_by.value if job.triggered_by else "unknown"
-
-            logger.info(
-                "Scan started",
-                extra={
-                    "scan_job_id": str(scan_job_id),
-                    "subnet_cidr": subnet_cidr,
-                    "triggered_by": triggered_by,
-                },
-            )
-
-        # Execute discovery probe asynchronously outside DB transaction
-        try:
-            probe_results = await self.scanner.scan_cidr(subnet_cidr, scan_ports=True)
-        except Exception as e:
-            scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
-            logger.error(
-                "Scan failed",
-                extra={
-                    "scan_job_id": str(scan_job_id),
-                    "subnet_cidr": subnet_cidr,
-                    "duration_ms": scan_duration_ms,
-                    "error": str(e),
-                },
-                exc_info=True,
-            )
             with Session(engine) as session:
                 job = session.get(ScanJob, scan_job_id)
-                if job:
+                if not job:
+                    logger.error("ScanJob not found", extra={"scan_job_id": str(scan_job_id)})
+                    return
+
+                subnet = session.get(Subnet, job.subnet_id)
+                if not subnet:
                     job.status = ScanStatus.FAILED
-                    job.error_message = str(e)
-                    job.completed_at = datetime.now(timezone.utc)
+                    job.error_message = f"Subnet {job.subnet_id} not found."
                     session.add(job)
                     session.commit()
-            return
+                    return
 
-        # Reconcile probe results against existing IP records
-        with Session(engine) as session:
-            subnet = session.get(Subnet, job_subnet_id)
-            all_hosts = expand_cidr_hosts(subnet.cidr)
-            
-            # Fetch existing IP records for this subnet
-            existing_ips_query = select(IPAddress).where(IPAddress.subnet_id == subnet.id)
-            existing_ips_map: Dict[str, IPAddress] = {
-                ip_rec.ip: ip_rec for ip_rec in session.exec(existing_ips_query).all()
-            }
+                job.status = ScanStatus.RUNNING
+                job.started_at = datetime.now(timezone.utc)
+                session.add(job)
+                session.commit()
+                subnet_cidr = subnet.cidr
+                job_subnet_id = job.subnet_id
+                triggered_by = job.triggered_by.value if job.triggered_by else "unknown"
 
-            now = datetime.now(timezone.utc)
-            active_count = 0
-            uncertain_count = 0
-            available_count = 0
-            reserved_count = 0
-            state_change_events: List[Dict] = []
-
-            for ip_str in all_hosts:
-                existing_rec = existing_ips_map.get(ip_str)
-                probe = probe_results.get(ip_str)
-
-                outcome = StateClassifier.classify(
-                    ip=ip_str,
-                    existing=existing_rec,
-                    probe=probe,
-                    subnet=subnet,
-                    now=now,
+                logger.info(
+                    "Scan started",
+                    extra={
+                        "scan_job_id": str(scan_job_id),
+                        "subnet_cidr": subnet_cidr,
+                        "triggered_by": triggered_by,
+                    },
                 )
 
-                if existing_rec is None:
-                    ip_obj = IPAddress(
-                        subnet_id=subnet.id,
-                        ip=ip_str,
-                        status=outcome.new_status,
-                        hostname=outcome.hostname,
-                        mac_address=outcome.mac_address,
-                        mac_vendor=outcome.mac_vendor,
-                        open_ports=outcome.open_ports,
-                        discovery_method=outcome.discovery_method,
-                        consecutive_misses=outcome.consecutive_misses,
-                        first_seen_at=outcome.first_seen_at,
-                        last_seen_at=outcome.last_seen_at,
-                        last_scanned_at=outcome.last_scanned_at,
-                    )
-                    session.add(ip_obj)
-                    session.flush()  # Generate id
-                    target_ip_id = ip_obj.id
-                else:
-                    ip_obj = existing_rec
-                    ip_obj.status = outcome.new_status
-                    ip_obj.hostname = outcome.hostname
-                    ip_obj.mac_address = outcome.mac_address
-                    ip_obj.mac_vendor = outcome.mac_vendor
-                    ip_obj.open_ports = outcome.open_ports
-                    ip_obj.discovery_method = outcome.discovery_method
-                    ip_obj.consecutive_misses = outcome.consecutive_misses
-                    ip_obj.first_seen_at = outcome.first_seen_at
-                    ip_obj.last_seen_at = outcome.last_seen_at
-                    ip_obj.last_scanned_at = outcome.last_scanned_at
-                    ip_obj.updated_at = now
-                    session.add(ip_obj)
-                    target_ip_id = ip_obj.id
+            # Execute discovery probe asynchronously outside DB transaction
+            try:
+                probe_results = await self.scanner.scan_cidr(subnet_cidr, scan_ports=True)
+            except Exception as e:
+                scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
+                logger.error(
+                    "Scan failed",
+                    extra={
+                        "scan_job_id": str(scan_job_id),
+                        "subnet_cidr": subnet_cidr,
+                        "duration_ms": scan_duration_ms,
+                        "error": str(e),
+                    },
+                    exc_info=True,
+                )
+                with Session(engine) as session:
+                    job = session.get(ScanJob, scan_job_id)
+                    if job:
+                        job.status = ScanStatus.FAILED
+                        job.error_message = str(e)
+                        job.completed_at = datetime.now(timezone.utc)
+                        session.add(job)
+                        session.commit()
+                return
 
-                # Audit Logging for changes
-                if outcome.event_type:
-                    history_entry = IPHistory(
-                        ip_address_id=target_ip_id,
-                        event_type=outcome.event_type,
-                        old_status=outcome.old_status.value if outcome.old_status else None,
-                        new_status=outcome.new_status.value,
-                        probe_details=outcome.event_details or {},
-                        timestamp=now,
+            # Reconcile probe results against existing IP records
+            with Session(engine) as session:
+                subnet = session.get(Subnet, job_subnet_id)
+                all_hosts = expand_cidr_hosts(subnet.cidr)
+
+                # Fetch existing IP records for this subnet
+                existing_ips_query = select(IPAddress).where(IPAddress.subnet_id == subnet.id)
+                existing_ips_map: Dict[str, IPAddress] = {
+                    ip_rec.ip: ip_rec for ip_rec in session.exec(existing_ips_query).all()
+                }
+
+                now = datetime.now(timezone.utc)
+                active_count = 0
+                uncertain_count = 0
+                available_count = 0
+                reserved_count = 0
+                state_change_events: List[Dict] = []
+
+                for ip_str in all_hosts:
+                    existing_rec = existing_ips_map.get(ip_str)
+                    probe = probe_results.get(ip_str)
+
+                    outcome = StateClassifier.classify(
+                        ip=ip_str,
+                        existing=existing_rec,
+                        probe=probe,
+                        subnet=subnet,
+                        now=now,
                     )
-                    session.add(history_entry)
+
+                    if existing_rec is None:
+                        ip_obj = IPAddress(
+                            subnet_id=subnet.id,
+                            ip=ip_str,
+                            status=outcome.new_status,
+                            hostname=outcome.hostname,
+                            mac_address=outcome.mac_address,
+                            mac_vendor=outcome.mac_vendor,
+                            open_ports=outcome.open_ports,
+                            discovery_method=outcome.discovery_method,
+                            consecutive_misses=outcome.consecutive_misses,
+                            first_seen_at=outcome.first_seen_at,
+                            last_seen_at=outcome.last_seen_at,
+                            last_scanned_at=outcome.last_scanned_at,
+                        )
+                        session.add(ip_obj)
+                        session.flush()  # Generate id
+                        target_ip_id = ip_obj.id
+                    else:
+                        ip_obj = existing_rec
+                        ip_obj.status = outcome.new_status
+                        ip_obj.hostname = outcome.hostname
+                        ip_obj.mac_address = outcome.mac_address
+                        ip_obj.mac_vendor = outcome.mac_vendor
+                        ip_obj.open_ports = outcome.open_ports
+                        ip_obj.discovery_method = outcome.discovery_method
+                        ip_obj.consecutive_misses = outcome.consecutive_misses
+                        ip_obj.first_seen_at = outcome.first_seen_at
+                        ip_obj.last_seen_at = outcome.last_seen_at
+                        ip_obj.last_scanned_at = outcome.last_scanned_at
+                        ip_obj.updated_at = now
+                        session.add(ip_obj)
+                        target_ip_id = ip_obj.id
+
+                    # Audit Logging for changes
+                    if outcome.event_type:
+                        history_entry = IPHistory(
+                            ip_address_id=target_ip_id,
+                            event_type=outcome.event_type,
+                            old_status=outcome.old_status.value if outcome.old_status else None,
+                            new_status=outcome.new_status.value,
+                            probe_details=outcome.event_details or {},
+                            timestamp=now,
+                        )
+                        session.add(history_entry)
 
                     if outcome.state_changed:
                         state_change_events.append({
@@ -177,74 +183,75 @@ class ScanService:
                             "subnet_cidr": subnet.cidr,
                         })
 
-                # Tally stats
-                if outcome.new_status == IPStatus.ACTIVE_DETECTED:
-                    active_count += 1
-                elif outcome.new_status == IPStatus.UNCERTAIN_FIREWALLED:
-                    uncertain_count += 1
-                elif outcome.new_status == IPStatus.AVAILABLE_CANDIDATE:
-                    available_count += 1
-                elif outcome.new_status == IPStatus.ASSIGNED_RESERVED:
-                    reserved_count += 1
+                    # Tally stats
+                    if outcome.new_status == IPStatus.ACTIVE_DETECTED:
+                        active_count += 1
+                    elif outcome.new_status == IPStatus.UNCERTAIN_FIREWALLED:
+                        uncertain_count += 1
+                    elif outcome.new_status == IPStatus.AVAILABLE_CANDIDATE:
+                        available_count += 1
+                    elif outcome.new_status == IPStatus.ASSIGNED_RESERVED:
+                        reserved_count += 1
 
-            # Update job record
-            job = session.get(ScanJob, scan_job_id)
-            job.status = ScanStatus.COMPLETED
-            job.completed_at = datetime.now(timezone.utc)
-            job.total_ips = len(all_hosts)
-            job.active_ips = active_count
-            job.uncertain_ips = uncertain_count
-            job.available_ips = available_count
-            job.reserved_ips = reserved_count
-            session.add(job)
-            session.commit()
+                # Update job record
+                job = session.get(ScanJob, scan_job_id)
+                job.status = ScanStatus.COMPLETED
+                job.completed_at = datetime.now(timezone.utc)
+                job.total_ips = len(all_hosts)
+                job.active_ips = active_count
+                job.uncertain_ips = uncertain_count
+                job.available_ips = available_count
+                job.reserved_ips = reserved_count
+                session.add(job)
+                session.commit()
 
-            scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
+                scan_duration_ms = int((datetime.now(timezone.utc) - scan_start_time).total_seconds() * 1000)
 
-            logger.info(
-                "Scan completed",
-                extra={
-                    "scan_job_id": str(scan_job_id),
-                    "subnet_cidr": subnet_cidr,
-                    "duration_ms": scan_duration_ms,
-                    "total_ips": job.total_ips,
-                    "active_ips": job.active_ips,
-                    "uncertain_ips": job.uncertain_ips,
-                    "available_ips": job.available_ips,
-                    "reserved_ips": job.reserved_ips,
-                },
-            )
-
-            # Dispatch webhooks asynchronously
-            if state_change_events:
-                logger.debug(
-                    "Dispatching state change events",
+                logger.info(
+                    "Scan completed",
                     extra={
                         "scan_job_id": str(scan_job_id),
-                        "event_count": len(state_change_events),
-                    },
-                )
-                for evt in state_change_events:
-                    asyncio.create_task(
-                        WebhookDispatcher.dispatch_event("ip.state_changed", evt, session)
-                    )
-
-            asyncio.create_task(
-                WebhookDispatcher.dispatch_event(
-                    "scan.completed",
-                    {
-                        "scan_job_id": str(job.id),
-                        "subnet_id": str(subnet.id),
-                        "subnet_cidr": subnet.cidr,
+                        "subnet_cidr": subnet_cidr,
+                        "duration_ms": scan_duration_ms,
                         "total_ips": job.total_ips,
                         "active_ips": job.active_ips,
                         "uncertain_ips": job.uncertain_ips,
                         "available_ips": job.available_ips,
                         "reserved_ips": job.reserved_ips,
                     },
-                    session,
                 )
-            )
+
+                # Dispatch webhooks asynchronously
+                if state_change_events:
+                    logger.debug(
+                        "Dispatching state change events",
+                        extra={
+                            "scan_job_id": str(scan_job_id),
+                            "event_count": len(state_change_events),
+                        },
+                    )
+                    for evt in state_change_events:
+                        asyncio.create_task(
+                            WebhookDispatcher.dispatch_event("ip.state_changed", evt, session)
+                        )
+
+                asyncio.create_task(
+                    WebhookDispatcher.dispatch_event(
+                        "scan.completed",
+                        {
+                            "scan_job_id": str(job.id),
+                            "subnet_id": str(subnet.id),
+                            "subnet_cidr": subnet.cidr,
+                            "total_ips": job.total_ips,
+                            "active_ips": job.active_ips,
+                            "uncertain_ips": job.uncertain_ips,
+                            "available_ips": job.available_ips,
+                            "reserved_ips": job.reserved_ips,
+                        },
+                        session,
+                    )
+                )
 
 
+# Module-level instance for test imports
 scan_service = ScanService()

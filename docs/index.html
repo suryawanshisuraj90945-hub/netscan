@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetScan — IP Discovery & Availability Tracking</title>
+    <meta name="description" content="Production-grade IP discovery and availability tracking platform. Reconcile active network probes with managed subnet pools.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;
+            --text:#e4e4e7;--muted:#71717a;--accent:#22d3ee;--accent2:#a78bfa;
+            --green:#4ade80;--orange:#fb923c;--red:#f87171;
+        }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+        a{color:var(--accent);text-decoration:none}
+        a:hover{text-decoration:underline}
+
+        .container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+        /* NAV */
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+        nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
+        .logo{font-size:1.25rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+        .logo span{color:var(--accent)}
+        .nav-links{display:flex;gap:24px;align-items:center}
+        .nav-links a{color:var(--muted);font-size:.875rem;font-weight:500;transition:color .2s}
+        .nav-links a:hover{color:var(--text);text-decoration:none}
+        .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:.875rem;font-weight:600;transition:all .2s}
+        .btn-primary{background:var(--accent);color:#000}
+        .btn-primary:hover{background:#06b6d4;text-decoration:none}
+        .btn-outline{border:1px solid var(--border);color:var(--text)}
+        .btn-outline:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+
+        /* HERO */
+        .hero{padding:160px 0 100px;text-align:center;position:relative}
+        .hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(34,211,238,.08) 0%,transparent 70%);pointer-events:none}
+        .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--border);border-radius:999px;font-size:.75rem;color:var(--muted);margin-bottom:24px}
+        .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        h1{font-size:clamp(2.5rem,6vw,4rem);font-weight:800;line-height:1.1;margin-bottom:20px;letter-spacing:-.03em}
+        h1 .gradient{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .hero-sub{font-size:1.2rem;color:var(--muted);max-width:600px;margin:0 auto 40px}
+        .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+        /* CODE */
+        .code-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;text-align:left;max-width:600px;margin:40px auto 0;font-family:'SF Mono',Fira Code,monospace;font-size:.85rem;overflow-x:auto;position:relative}
+        .code-block .comment{color:var(--muted)}
+        .code-block .cmd{color:var(--accent)}
+        .code-block .flag{color:var(--accent2)}
+        .code-block .str{color:var(--green)}
+        .copy-btn{position:absolute;top:12px;right:12px;background:var(--border);border:none;color:var(--muted);padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer;transition:all .2s}
+        .copy-btn:hover{color:var(--text);background:#2a2a3a}
+
+        /* STATS */
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:80px 0}
+        .stat{background:var(--surface);padding:32px 20px;text-align:center}
+        .stat-value{font-size:2rem;font-weight:800;color:var(--accent)}
+        .stat-label{font-size:.8rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+        /* FEATURES */
+        .section{padding:100px 0}
+        .section-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600;margin-bottom:8px}
+        .section-title{font-size:2.25rem;font-weight:700;margin-bottom:16px;letter-spacing:-.02em}
+        .section-desc{color:var(--muted);max-width:560px;margin-bottom:48px}
+        .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+        .feature{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;transition:border-color .2s}
+        .feature:hover{border-color:var(--accent)}
+        .feature-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:16px}
+        .feature-icon.cyan{background:rgba(34,211,238,.1);color:var(--accent)}
+        .feature-icon.purple{background:rgba(167,139,250,.1);color:var(--accent2)}
+        .feature-icon.green{background:rgba(74,222,128,.1);color:var(--green)}
+        .feature-icon.orange{background:rgba(251,146,60,.1);color:var(--orange)}
+        .feature h3{font-size:1.05rem;font-weight:600;margin-bottom:8px}
+        .feature p{font-size:.875rem;color:var(--muted);line-height:1.6}
+
+        /* ARCHITECTURE */
+        .arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+        .arch-list{list-style:none}
+        .arch-list li{padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+        .arch-list li:last-child{border:none}
+        .arch-tag{font-size:.7rem;padding:2px 8px;border-radius:4px;font-weight:600;white-space:nowrap;font-family:monospace}
+        .arch-tag.api{background:rgba(34,211,238,.15);color:var(--accent)}
+        .arch-tag.scanner{background:rgba(167,139,250,.15);color:var(--accent2)}
+        .arch-tag.service{background:rgba(74,222,128,.15);color:var(--green)}
+        .arch-tag.web{background:rgba(251,146,60,.15);color:var(--orange)}
+
+        /* SECURITY */
+        .security-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+        .security-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+        .security-card h4{font-size:.9rem;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+        .security-card p{font-size:.8rem;color:var(--muted)}
+
+        /* CTA */
+        .cta{text-align:center;padding:100px 0;border-top:1px solid var(--border)}
+        .cta h2{font-size:2rem;font-weight:700;margin-bottom:16px}
+        .cta p{color:var(--muted);margin-bottom:32px}
+
+        /* FOOTER */
+        footer{border-top:1px solid var(--border);padding:40px 0;text-align:center;color:var(--muted);font-size:.8rem}
+        footer .links{display:flex;gap:20px;justify-content:center;margin-bottom:16px}
+
+        @media(max-width:768px){
+            .stats{grid-template-columns:repeat(2,1fr)}
+            .arch-grid{grid-template-columns:1fr}
+            .nav-links a:not(.btn){display:none}
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <div class="logo"><span>Net</span>Scan</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#security">Security</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-outline" target="_blank">GitHub</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan/releases" class="btn btn-primary" target="_blank">v0.1.0</a>
+        </div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container">
+        <div class="badge"><span class="dot"></span> Production Ready</div>
+        <h1>IP Discovery &<br><span class="gradient">Availability Tracking</span></h1>
+        <p class="hero-sub">Reconcile active network probes with managed subnet pools. Track which IPs are active, quarantined, reserved, or available for allocation.</p>
+        <div class="hero-actions">
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-primary" target="_blank">View on GitHub</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan#quickstart" class="btn btn-outline" target="_blank">Quick Start</a>
+        </div>
+        <div class="code-block">
+            <button class="copy-btn" onclick="navigator.clipboard.writeText(this.dataset.cmd)">Copy</button>
+            <span class="comment"># One-command Docker deployment</span><br>
+            <span class="cmd">docker run</span> -d -p 8000:8000 --name netscan \<br>
+            &nbsp;&nbsp;<span class="flag">-e</span> ENVIRONMENT=production \<br>
+            &nbsp;&nbsp;<span class="flag">-e</span> SECRET_KEY=<span class="str">your-secret-key</span> \<br>
+            &nbsp;&nbsp;<span class="flag">-e</span> DASHBOARD_PASSWORD=<span class="str">your-password</span> \<br>
+            &nbsp;&nbsp;<span class="str">ghcr.io/suryawanshisuraj90945-hub/netscan:latest</span>
+        </div>
+    </div>
+</section>
+
+<section class="container">
+    <div class="stats">
+        <div class="stat"><div class="stat-value">105</div><div class="stat-label">Tests Passing</div></div>
+        <div class="stat"><div class="stat-value">3</div><div class="stat-label">Probe Types</div></div>
+        <div class="stat"><div class="stat-value">0</div><div class="stat-label">Node.js Dependencies</div></div>
+        <div class="stat"><div class="stat-value">MIT</div><div class="stat-label">License</div></div>
+    </div>
+</section>
+
+<section class="section" id="features">
+    <div class="container">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Built for real networks</h2>
+        <p class="section-desc">Not another ping sweeper. NetScan understands quarantine periods, state transitions, and the difference between "down" and "firewalled."</p>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon cyan">&#x1f50d;</div>
+                <h3>Multi-Probe Engine</h3>
+                <p>Auto-detects Linux capabilities for ARP and TCP SYN stealth sweeps. Falls back to unprivileged TCP Connect when needed.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon purple">&#x1f6e1;</div>
+                <h3>Safe Availability Logic</h3>
+                <p>Unresponsive hosts enter UNCERTAIN_FIREWALLED. Released only after meeting both miss threshold and quarantine duration.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon green">&#x1f4e1;</div>
+                <h3>API-First Design</h3>
+                <p>Full REST API with OpenAPI docs. Programmatic subnet management, IP provisioning, and per-IP audit history.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon orange">&#x1f514;</div>
+                <h3>HMAC-SHA256 Webhooks</h3>
+                <p>Signed outbound event notifications with full IP object payloads. Bounded retries with configurable backoff.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon cyan">&#x2699;</div>
+                <h3>In-Process Scheduler</h3>
+                <p>Background scanning with APScheduler. Zero external dependencies &mdash; no Redis, no Celery, no message queues.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon purple">&#x1f5a5;</div>
+                <h3>HTMX Dashboard</h3>
+                <p>Server-rendered CIDR matrix grid, IP inspector drawer, scan job monitor. Zero JavaScript build step.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="architecture" style="background:var(--surface)">
+    <div class="container">
+        <div class="arch-grid">
+            <div>
+                <div class="section-label">Architecture</div>
+                <h2 class="section-title">Clean, modular, maintainable</h2>
+                <p class="section-desc">FastAPI + SQLModel + HTMX. No framework soup. Every module has a single responsibility.</p>
+                <a href="https://github.com/suryawanshisuraj90945-hub/netscan#architecture" class="btn btn-outline" target="_blank">View Full Docs</a>
+            </div>
+            <ul class="arch-list">
+                <li><span class="arch-tag api">api/v1/</span><div><strong>REST Endpoints</strong><br><span style="color:var(--muted);font-size:.85rem">subnets, ips, scans, webhooks, auth_keys</span></div></li>
+                <li><span class="arch-tag scanner">scanner/</span><div><strong>Discovery Engine</strong><br><span style="color:var(--muted);font-size:.85rem">nmap runner, CIDR utils, state classifier</span></div></li>
+                <li><span class="arch-tag service">services/</span><div><strong>Background Services</strong><br><span style="color:var(--muted);font-size:.85rem">scan scheduler, webhook dispatcher</span></div></li>
+                <li><span class="arch-tag web">web/</span><div><strong>HTMX Dashboard</strong><br><span style="color:var(--muted);font-size:.85rem">Jinja2 templates, server-rendered UI</span></div></li>
+                <li><span class="arch-tag api">config.py</span><div><strong>Settings</strong><br><span style="color:var(--muted);font-size:.85rem">pydantic-settings, env vars, .env file</span></div></li>
+                <li><span class="arch-tag scanner">models.py</span><div><strong>Data Models</strong><br><span style="color:var(--muted);font-size:.85rem">SQLModel schemas, relationships</span></div></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="security">
+    <div class="container">
+        <div class="section-label">Security</div>
+        <h2 class="section-title">Hardened for production</h2>
+        <p class="section-desc">Security isn't a feature. It's a requirement. Every endpoint is authenticated. Every input is validated.</p>
+        <div class="security-grid">
+            <div class="security-card">
+                <h4>&#x1f6e1; CORS Enforcement</h4>
+                <p>Production rejects wildcard origins. Only explicit, configured origins are allowed.</p>
+            </div>
+            <div class="security-card">
+                <h4>&#x1f512; DEBUG Protection</h4>
+                <p>Debug mode is blocked in production at startup. No accidental info leaks.</p>
+            </div>
+            <div class="security-card">
+                <h4>&#x1f310; SSRF Blocking</h4>
+                <p>DNS failure is fail-closed. Private IPs, loopback, and link-local ranges blocked. Redirect validation.</p>
+            </div>
+            <div class="security-card">
+                <h4>&#x1f511; API Key Auth</h4>
+                <p>X-API-Key header authentication with RBAC: admin, operator, read_only roles.</p>
+            </div>
+            <div class="security-card">
+                <h4>&#x2699; Scan Concurrency</h4>
+                <p>asyncio.Semaphore limits concurrent nmap scans. Prevents resource exhaustion.</p>
+            </div>
+            <div class="security-card">
+                <h4>&#x1f4e8; Webhook Signing</h4>
+                <p>HMAC-SHA256 signed outbound payloads. Verify every notification at the receiver.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta">
+    <div class="container">
+        <h2>Ready to discover your network?</h2>
+        <p>Open source. MIT licensed. Production ready.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" class="btn btn-primary" target="_blank" style="padding:12px 24px;font-size:1rem">Get Started</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan/releases" class="btn btn-outline" target="_blank" style="padding:12px 24px;font-size:1rem">Download v0.1.0</a>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <div class="links">
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan" target="_blank">GitHub</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan/releases" target="_blank">Releases</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan/blob/main/LICENSE" target="_blank">License</a>
+            <a href="https://github.com/suryawanshisuraj90945-hub/netscan/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+        </div>
+        <p>Built with FastAPI, SQLModel, and HTMX. No framework soup.</p>
+    </div>
+</footer>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    const block = btn.closest('.code-block');
+    const text = block.textContent.replace('Copy', '').trim();
+    btn.dataset.cmd = text;
+});
+</script>
+
+</body>
+</html>

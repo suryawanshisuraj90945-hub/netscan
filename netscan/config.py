@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "NetScan"
     DEBUG: bool = False
+    ENVIRONMENT: str = "development"  # development, test, or production
     SECRET_KEY: str = ""
 
     # Database
@@ -24,6 +25,9 @@ class Settings(BaseSettings):
     TOP_TCP_PORTS: str = "80,443,22,445,3389,8080,8443,53"
 
     # CORS
+    # Warning: ALLOWED_ORIGINS="*" is NOT permitted when DEBUG=False (production).
+    # Set specific origins like: "https://example.com,http://localhost:8080"
+    # The "*" wildcard is only safe when DEBUG=True (development only).
     ALLOWED_ORIGINS: str = "*"
 
     # Dashboard Authentication
@@ -34,6 +38,12 @@ class Settings(BaseSettings):
     WEBHOOK_MAX_RETRIES: int = 3
 
     def validate_for_production(self) -> None:
+        # Production safety: DEBUG=True is not allowed in production environment
+        if self.ENVIRONMENT == "production" and self.DEBUG:
+            raise ValueError(
+                "DEBUG=True is not allowed in production environment. "
+                "Set ENVIRONMENT=development or ENVIRONMENT=test, or set DEBUG=False."
+            )
         if not self.DEBUG and not self.SECRET_KEY:
             raise ValueError(
                 "SECRET_KEY must be set in production (DEBUG=False). "
@@ -43,6 +53,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DASHBOARD_PASSWORD must be changed from the default 'admin' in production "
                 "(DEBUG=False). Set a strong password in your .env file or environment."
+            )
+        if not self.DEBUG and self.ALLOWED_ORIGINS == "*":
+            raise ValueError(
+                "ALLOWED_ORIGINS must not be '*' in production (DEBUG=False). "
+                "Set specific origins like: 'https://example.com,http://localhost:8080'."
             )
 
 

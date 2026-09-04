@@ -17,6 +17,13 @@ services:
       #   true = development / debugging
       #   false = production (required for deployment)
       - DEBUG=false
+      # Environment configuration
+      #   Set the environment: "development", "test", or "production".
+      #   - "development": relaxed security, DEBUG can be True
+      #   - "test": for test suites; DEBUG may be True
+      #   - "production": strict security; DEBUG must be False, SECRET_KEY required,
+      #     DASHBOARD_PASSWORD must be changed, ALLOWED_ORIGINS must not be "*"
+      - ENVIRONMENT=${ENVIRONMENT:-development}
       # SECRET_KEY is required for session signing and must be set in production (DEBUG=False).
       # Generate a strong random string (minimum 32 characters recommended).
       # The actual value should be injected via your .env file or Docker environment.
@@ -34,8 +41,9 @@ services:
       - TOP_TCP_PORTS=${TOP_TCP_PORTS:-"80,443,22,445,3389,8080,8443,53"}
       # CORS
       # Comma-separated list of allowed origins.
-      # ALLOWED_ORIGINS="https://your-domain.com,http://localhost:8080" is the recommended secure default.
-      # Using "*" allows all origins (not recommended for production).
+      # "*" allows all origins (NOT recommended for production, only development).
+      # Set specific origins for production, e.g.:
+      #   ALLOWED_ORIGINS="https://your-domain.com,http://localhost:8080"
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://your-domain.com,http://localhost:8080}
       # Dashboard Authentication
       # DASHBOARD_PASSWORD is required when DEBUG=false. Change from the default 'admin' in production.

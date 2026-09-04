@@ -316,7 +316,7 @@ def test_production_rejects_default_dashboard_password():
 def test_production_allows_custom_dashboard_password():
     """validate_for_production must pass with a non-default DASHBOARD_PASSWORD."""
     from netscan.config import Settings
-    settings = Settings(DEBUG=False, SECRET_KEY="test-secret-key-12345", DASHBOARD_PASSWORD="s3cure-p@ss!")
+    settings = Settings(DEBUG=False, SECRET_KEY="test-secret-key-12345", DASHBOARD_PASSWORD="s3cure-p@ss!", ALLOWED_ORIGINS="https://example.com")
     settings.validate_for_production()  # Should not raise
 
 

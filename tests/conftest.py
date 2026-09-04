@@ -1,4 +1,5 @@
 import os
+import socket
 os.environ.setdefault("DEBUG", "true")
 
 import pytest
@@ -90,3 +91,18 @@ def auth_db_fixture():
         raw_key = res.json()["raw_key"]
         yield client, {"X-API-Key": raw_key}, engine
     app.dependency_overrides.clear()
+
+
+_original_gethostbyname_ex = socket.gethostbyname_ex
+
+
+def _patched_gethostbyname_ex(hostname):  # type: ignore[override]
+    test_hosts = ["a.example.com", "b.example.com", "c.example.com", "flaky.example.com", "dead.example.com"]
+    if hostname in test_hosts:
+        return (["8.8.8.8"], [], ["8.8.8.8"])
+    return _original_gethostbyname_ex(hostname)
+
+# Apply the patch so DNS resolution uses the test mapping
+socket.gethostbyname_ex = _patched_gethostbyname_ex
+
+os.environ.setdefault("DEBUG", "true")
